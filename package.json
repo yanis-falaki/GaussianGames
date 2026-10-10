@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Two first-person browser games built on one Gaussian-splat scan of an abandoned sanatorium: RESIDUE (horror) and Undeveloped (detective).",
-  "license": "Unlicense",
+  "license": "CC-BY-4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

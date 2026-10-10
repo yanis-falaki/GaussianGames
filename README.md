@@ -118,9 +118,11 @@ docs/                 README images
 
 ## License
 
-The code in this repository is released into the public domain under [the Unlicense](LICENSE).
+Gaussian Games is licensed under [CC BY 4.0](LICENSE). You can share, adapt and build on it for any purpose, as long as you credit it wherever you distribute or show it:
 
-That covers the code only:
+> Gaussian Games by Yanis Falaki – https://github.com/yanis-falaki/GaussianGames
+
+That covers the code and original content only:
 - **The scan** is not included and stays under its own licence, [CC BY-NC 4.0](http://creativecommons.org/licenses/by-nc/4.0/) (Christoph Schindelar). Anything that ships it must credit him and stay non-commercial.
 - **The images** in `docs/` and `public/menu/` are renders of the scan, so the same licence applies to them.
 - **The breathing sample** in `public/assets/audio/` is CC0.
