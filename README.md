@@ -115,3 +115,12 @@ docs/                 README images
 - **Renderer:** [Spark](https://sparkjs.dev) by World Labs, on [three.js](https://threejs.org).
 - **Sound:** RESIDUE's breathing is ["breathing tired"](https://opengameart.org/content/breathing-tired) by mikeask (CC0). All other sound, including Undeveloped's music, is synthesised.
 - **Story:** the stories, people and documents in both games are fiction.
+
+## License
+
+The code in this repository is released into the public domain under [the Unlicense](LICENSE).
+
+That covers the code only:
+- **The scan** is not included and stays under its own licence, [CC BY-NC 4.0](http://creativecommons.org/licenses/by-nc/4.0/) (Christoph Schindelar). Anything that ships it must credit him and stay non-commercial.
+- **The images** in `docs/` and `public/menu/` are renders of the scan, so the same licence applies to them.
+- **The breathing sample** in `public/assets/audio/` is CC0.
