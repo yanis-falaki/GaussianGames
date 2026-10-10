@@ -2,6 +2,8 @@
 
 Two first-person browser games built on **one Gaussian-splat scan** of an abandoned sanatorium. They use the same 12.5 million splats, in the same building, but one game plays at night and the other in daylight.
 
+**▶ Play in your browser: [gaussiangames.pages.dev](https://gaussiangames.pages.dev)** (desktop with a dedicated GPU; the games download a 225 MB scan)
+
 ![The menu: the same dining hall at night (RESIDUE) and by day (Undeveloped)](docs/menu.jpg)
 
 | | |
