@@ -13,7 +13,7 @@ import { buildEdgeField } from "./case/boundary.js";
 import { Camcorder } from "./camcorder.js";
 import { Bulb, buildLightVis } from "./bulb.js";
 import { toggleFullscreen, sinceLockChange } from "./fullscreen.js";
-import { chooseQuality, watchForSlowFrames, QUALITY, gpuName } from "./quality.js";
+import { chooseQuality, watchForSlowFrames, bindQualityButtons, QUALITY, gpuName } from "./quality.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -41,6 +41,7 @@ const colourMode = params.get("sh") === "1" ? "fast" : "full";
 const quality = chooseQuality(renderer, params);
 const Q = QUALITY[quality];
 if (DEBUG) console.log(`quality ${quality} (${gpuName(renderer)})`);
+bindQualityButtons(quality);
 
 const spark = new SparkRenderer({
   renderer,

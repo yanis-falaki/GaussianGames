@@ -106,7 +106,7 @@ Each game picks a version of the scan for the machine it's running on (`src/qual
 - **Full:** dedicated GPUs get every splat with full colour detail (225 MB).
 - **Lite:** integrated GPUs (Apple silicon, Intel, phones) get a chunked level-of-detail tree with degree-1 colour. Spark streams it, drawing about 1.25M splats, and only the chunks needed are downloaded.
 - **Fallback:** if the full scan turns out to be a slideshow while loading, the game switches to the lite one and remembers that.
-- **Overrides:** `?full` or `?lite` force either version.
+- **Choosing:** the title screens have a **Graphics: quality / performance** button that switches between them and is remembered. `?full` or `?lite` also force either version.
 
 RESIDUE draws all 12.5M splats without LoD. On an RTX 2070 at 1080p it runs at about 55-60 fps. The render settings in `src/render-config.js` were tuned with a headless benchmark:
 - `tools/fitness.mjs` scores frame time and image quality against a high-budget reference;

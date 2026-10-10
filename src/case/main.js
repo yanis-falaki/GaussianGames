@@ -5,7 +5,7 @@ import { CaseMusic } from "./music.js";
 import { Motes } from "./motes.js";
 import { trailRoute, buildTrail } from "./trail.js";
 import { bindFullscreenButtons, sinceLockChange } from "../fullscreen.js";
-import { watchForSlowFrames } from "../quality.js";
+import { watchForSlowFrames, bindQualityButtons } from "../quality.js";
 import { Haze } from "./haze.js";
 import { buildEdgeField } from "./boundary.js";
 import { World } from "../world.js";
@@ -170,6 +170,7 @@ function setFrozen(on) {
 }
 
 bindFullscreenButtons();
+bindQualityButtons(view.quality);
 
 let toastTimer = 0;
 function toast(html, ms = 2600) {
