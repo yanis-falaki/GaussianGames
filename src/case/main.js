@@ -126,23 +126,25 @@ canvas.addEventListener("mousedown", (e) => {
 addEventListener("contextmenu", (e) => e.preventDefault());
 addEventListener("keydown", (e) => {
   if (!state.started) return;
-  if (e.code === "Tab") { e.preventDefault(); state.ui === "notebook" ? closeUI() : openNotebook(); return; }
+  if (e.code === "Tab") { e.preventDefault(); if (cardOpen()) closeCard(); state.ui === "notebook" ? closeUI() : openNotebook(); return; }
   if (e.code === "KeyE" && !e.repeat) { state.ui === "doc" ? closeUI() : !state.ui && !state.paused && examine(); }
   if (DEBUG && e.code === "KeyP" && !e.repeat && !state.ui) setFrozen(!state.frozen); // freeze frame, for screenshots
   // Esc closes what's open (a document, the notebook, the pause menu); while walking it pauses.
   // (In fullscreen the Esc key is kept for the game; holding it leaves fullscreen.)
   // M does the same, without Esc (which browsers also use for leaving fullscreen)
   if ((e.code === "Escape" || e.code === "KeyM") && !e.repeat) {
-    if (state.ui) { if (state.ui !== "ending") closeUI(); }
+    if (cardOpen()) closeCard();
+    else if (state.ui) { if (state.ui !== "ending") closeUI(); }
     else if (document.pointerLockElement === canvas) document.exitPointerLock();
     else if (!$("pause").hidden && sinceLockChange() > 300) lock();
   }
 });
-$("doc").addEventListener("click", closeUI);
+$("doc").addEventListener("click", () => (cardOpen() ? closeCard() : closeUI())); // a card over the notebook, or a document picked up
 $("nb-close").onclick = closeUI;
 
 function closeUI() {
   if (state.ui === "ending") return;
+  $("doc").classList.remove("over-notebook");
   for (const id of ["doc", "notebook"]) $(id).hidden = true;
   state.ui = null;
   lock();
@@ -209,6 +211,7 @@ function examine() {
   const c = (f.find((x) => x.clue.kind === "doc") ?? f[0]).clue;
   if (c.kind === "doc") {
     $("doc-body").innerHTML = c.doc;
+    $("doc-note").textContent = "click or press E to put it back · it's been added to your notebook";
     $("doc").hidden = false;
     state.ui = "doc";
     document.exitPointerLock?.();
@@ -285,7 +288,7 @@ function renderNotebook() {
 
   const ci = state.chapterTab, ch = CASE.CHAPTERS[ci];
   const solved = state.solved[ci];
-  let html = solved ? "" : `<p class="nb-how">Click a blank, then pick a piece of evidence or a word. When every statement in the chapter holds, check it.</p>`;
+  let html = solved ? "" : `<p class="nb-how">Click a blank, then pick a piece of evidence or a word. When every statement in the chapter holds, check it. Click any piece of evidence to look at it again.</p>`;
   ch.questions.forEach((q, qi) => {
     const parts = q.text.split(/(\{\w\})/g).map((part) => {
       const m = /^\{(\w)\}$/.exec(part);
@@ -305,7 +308,7 @@ function renderNotebook() {
 
   // evidence grid
   const ev = [...state.evidence.values()];
-  $("nb-ev-count").textContent = `(${ev.length})`;
+  $("nb-ev-count").textContent = ev.length ? `(${ev.length}) · click one to look at it again` : "(0)";
   $("nb-evidence").innerHTML = ev.length
     ? ev.map((e) => `<button class="card ${picker ? "pickable" : ""}" data-id="${e.id}">
         ${e.img ? `<img src="${e.img}" alt="">` : `<div class="docicon">${e.kind === "doc" ? "DOCUMENT" : "NOTE"}</div>`}
@@ -390,9 +393,16 @@ function showCard(id) {
   if (!e) return;
   if (e.kind === "doc") { $("doc-body").innerHTML = e.doc; }
   else $("doc-body").innerHTML = `${e.img ? `<img class="photo" src="${e.img}">` : ""}<h2>${esc(e.label)}</h2><p>${esc(e.note)}</p><p class="small">${esc(e.room)}</p>`;
+  $("doc-note").textContent = "click or press Esc to go back to your notebook";
+  $("doc").classList.add("over-notebook");
   $("doc").hidden = false;
-  $("doc").onclick = () => { $("doc").hidden = true; $("doc").onclick = closeUI; };
 }
+// back from a card opened in the notebook
+function closeCard() {
+  $("doc").hidden = true;
+  $("doc").classList.remove("over-notebook");
+}
+const cardOpen = () => state.ui === "notebook" && !$("doc").hidden;
 
 function finish() {
   state.ui = "ending";

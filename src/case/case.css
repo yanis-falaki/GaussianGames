@@ -122,3 +122,4 @@ button { font: inherit; cursor: pointer; }
 .menulink { position: fixed; top: 20px; left: 24px; font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: .2em; text-transform: uppercase; color: rgba(244,239,228,.6); text-decoration: none; }
 .menulink:hover { color: #f4efe4; }
 .nb-how { margin: 0 0 14px; font-size: 13px; color: #6f685c; font-style: italic; }
+#doc.over-notebook { z-index: 30; cursor: pointer; }
