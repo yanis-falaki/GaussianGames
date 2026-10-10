@@ -5,6 +5,7 @@ import { CaseMusic } from "./music.js";
 import { Motes } from "./motes.js";
 import { trailRoute, buildTrail } from "./trail.js";
 import { bindFullscreenButtons, sinceLockChange } from "../fullscreen.js";
+import { watchForSlowFrames } from "../quality.js";
 import { Haze } from "./haze.js";
 import { buildEdgeField } from "./boundary.js";
 import { World } from "../world.js";
@@ -58,6 +59,7 @@ async function load() {
   player = new Player(camera, world, audio, canvas, { stamina: false, walk: 2.1, run: 3.8, accel: 7, decel: 9, bob: 0.35, roll: 0.04 });
   player.spawn(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z, CASE.SPAWN.yaw);
   await view.mesh.initialized;
+  watchForSlowFrames(view.quality); // if the full scan is a slideshow here, switch to the lite one
   motes = new Motes(view.scene, clues);
   // Mara's footprints to the stairs, with a little glinting dust over a few of them
   const route = trailRoute(world, new THREE.Vector3(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z), new THREE.Vector3(...CASE.TRAIL.to), CASE.TRAIL.length);

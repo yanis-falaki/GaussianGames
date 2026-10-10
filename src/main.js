@@ -13,6 +13,7 @@ import { buildEdgeField } from "./case/boundary.js";
 import { Camcorder } from "./camcorder.js";
 import { Bulb, buildLightVis } from "./bulb.js";
 import { toggleFullscreen, sinceLockChange } from "./fullscreen.js";
+import { chooseQuality, watchForSlowFrames, QUALITY, gpuName } from "./quality.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -36,10 +37,14 @@ if (params.has("clean")) camcorder.setOn(false);
 // colour detail: full spherical harmonics (glossy steel, view-dependent colour); ?sh=1 is a
 // lighter developer fallback
 const colourMode = params.get("sh") === "1" ? "fast" : "full";
+// full scan for dedicated GPUs, a streamed lighter one for integrated GPUs (see quality.js)
+const quality = chooseQuality(renderer, params);
+const Q = QUALITY[quality];
+if (DEBUG) console.log(`quality ${quality} (${gpuName(renderer)})`);
 
 const spark = new SparkRenderer({
   renderer,
-  lodSplatScale: Number(params.get("detail")) || COLOUR_MODES[colourMode].lodSplatScale,
+  lodSplatScale: Number(params.get("detail")) || Q.lodSplatScale || COLOUR_MODES[colourMode].lodSplatScale,
   behindFoveate: RENDER.behindFoveate,
   coneFoveate: RENDER.coneFoveate,
   coneFov0: RENDER.coneFov0,
@@ -91,15 +96,16 @@ async function load() {
   // Load the whole LoD tree into memory up front (no streaming): nothing has to be fetched
   // mid-game, so there's no waiting for detail to arrive.
   sanatorium = new SplatMesh({
-    url: params.get("scene") ?? (params.has("lod") ? RENDER.lodScene : RENDER.scene),
-    extSplats: params.has("ext") || undefined, // debug: 32-byte high-precision splat encoding
+    url: params.get("scene") ?? (Q.paged ? RENDER.liteScene : params.has("lod") ? RENDER.lodScene : RENDER.scene),
+    paged: Q.paged || undefined, // the lite scene streams its level-of-detail chunks as needed
+    extSplats: (!Q.paged && params.has("ext")) || undefined, // debug: 32-byte high-precision splat encoding
     onProgress: (e) => {
       if (e.total) $("progress").textContent = `loading scan  ${Math.round((100 * e.loaded) / e.total)}%`;
     },
   });
   // the capture is y-down; flip 180deg about X
   sanatorium.quaternion.set(1, 0, 0, 0);
-  sanatorium.maxSh = COLOUR_MODES[colourMode].maxSh;
+  sanatorium.maxSh = Math.min(Q.maxSh, COLOUR_MODES[colourMode].maxSh);
   scene.add(sanatorium);
 
   fx = new SceneFX(sanatorium);
@@ -111,6 +117,7 @@ async function load() {
 
   $("progress").textContent = "loading scan";
   await sanatorium.initialized;
+  watchForSlowFrames(quality); // if the full scan is a slideshow here, switch to the lite one
   // Spark builds its LoD structures right after loading, which stalls rendering for a few
   // seconds. Hold the door until frames are coming quickly again.
   $("progress").textContent = "developing the scan";
@@ -736,7 +743,7 @@ const clock = new THREE.Clock();
 // adaptive detail: nudge the LoD splat budget to hold ~55fps (unless ?detail= was given)
 // Calibrates for the first ~20s of play, then locks so detail doesn't visibly shift while
 // you play; afterwards it only steps down if frame rate collapses.
-const adaptive = { on: !params.has("detail"), acc: 0, frames: 0, played: 0, grow: false, cap: COLOUR_MODES[colourMode].lodSplatScale };
+const adaptive = { on: !params.has("detail"), acc: 0, frames: 0, played: 0, grow: false, cap: Q.lodCap || COLOUR_MODES[colourMode].lodSplatScale };
 function adapt(rawDt) {
   if (!adaptive.on || !state.started || state.paused) return;
   adaptive.played += rawDt;

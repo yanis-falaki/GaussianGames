@@ -12,5 +12,6 @@ notes/
 __pycache__/
 bench/
 public/assets/bench/
+public/assets/lite/
 .wrangler/
 .deploy/

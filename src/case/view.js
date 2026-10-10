@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { RENDER } from "../render-config.js";
 import { HAZE_COLOR } from "./haze.js";
+import { chooseQuality, QUALITY } from "../quality.js";
 
 // Patch Spark's vertex shader: opacity-aware splat extent (quad ends where the splat's falloff
 // drops below ALPHA_CUT): opaque splats keep the full footprint, faint ones shrink -> less fill.
@@ -91,6 +92,9 @@ export function createView({ container, params, onProgress }) {
   renderer.setSize(innerWidth, innerHeight);
   renderer.setClearColor(0x000000, 1);
   container.appendChild(renderer.domElement);
+  // full scan for dedicated GPUs, a streamed lighter one for integrated GPUs (see quality.js)
+  const quality = chooseQuality(renderer, params);
+  const Q = QUALITY[quality];
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 80);
@@ -101,7 +105,7 @@ export function createView({ container, params, onProgress }) {
     maxStdDev: RENDER.maxStdDev,
     focalAdjustment: Number(params.get("focal")) || RENDER.focalAdjustment,
     autoUpdate: false,
-    lodSplatScale: 1.0,
+    lodSplatScale: Q.lodSplatScale || 1.0,
   });
   installExtent(spark, params.has("alphacut") ? Number(params.get("alphacut")) : RENDER.alphaCut, {
     color: HAZE_COLOR, fog: new THREE.Vector3(9, 30, 0.55),
@@ -110,7 +114,8 @@ export function createView({ container, params, onProgress }) {
   scene.add(spark);
 
   const mesh = new SplatMesh({
-    url: params.get("scene") ?? (params.has("lod") ? RENDER.lodScene : RENDER.scene),
+    url: params.get("scene") ?? (Q.paged ? RENDER.liteScene : params.has("lod") ? RENDER.lodScene : RENDER.scene),
+    paged: Q.paged || undefined, // the lite scene streams its level-of-detail chunks as needed
     onProgress,
   });
   mesh.quaternion.set(1, 0, 0, 0); // the capture is y-down
@@ -153,5 +158,5 @@ export function createView({ container, params, onProgress }) {
     const u = spark.material.uniforms;
     u.cfEdgeTex.value = f.tex; u.cfEdgeOrigin.value.copy(f.origin); u.cfEdgeSize.value.copy(f.size); u.cfEdgeOn.value = 1;
   };
-  return { renderer, scene, camera, spark, mesh, render, touch, setEdgeField, setBoundaries };
+  return { renderer, scene, camera, spark, mesh, quality, render, touch, setEdgeField, setBoundaries };
 }

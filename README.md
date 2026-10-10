@@ -2,7 +2,7 @@
 
 Two first-person browser games built on **one Gaussian-splat scan** of an abandoned sanatorium. They use the same 12.5 million splats, in the same building, but one game plays at night and the other in daylight.
 
-**▶ Play in your browser: [gaussiangames.pages.dev](https://gaussiangames.pages.dev)** (desktop with a dedicated GPU; the games download a 225 MB scan)
+**▶ Play in your browser: [gaussiangames.pages.dev](https://gaussiangames.pages.dev)** (desktop or laptop with a keyboard and mouse)
 
 ![The menu: the same dining hall at night (RESIDUE) and by day (Undeveloped)](docs/menu.jpg)
 
@@ -20,7 +20,7 @@ npm run assets -- "URBEX Sanatorium Inside - Part01.zip"   # once, see below
 npm run dev
 ```
 
-Open the printed URL in Chrome, Edge or Firefox on a desktop with a dedicated GPU. Wear headphones for RESIDUE. The menu at `/` links to both games, which are also at `/residue.html` and `/undeveloped.html`.
+Open the printed URL in Chrome, Edge, Firefox or Safari. Wear headphones for RESIDUE. The menu at `/` links to both games, which are also at `/residue.html` and `/undeveloped.html`.
 
 **The scan is not in this repository.** Download *URBEX: Sanatorium Inside – Part01* by Christoph Schindelar from [superspl.at](https://superspl.at/scene/8429e5e2) (CC BY-NC 4.0). `npm run assets` turns the zip into what the games load:
 - a cropped, cleaned SPZ of every splat (~215 MB);
@@ -54,7 +54,7 @@ npm run deploy
 
 Extras:
 - `H` turns the camcorder filter on and off (remembered); `?clean` starts without it.
-- `?lod` uses the lighter level-of-detail scene for weaker GPUs.
+- `?lite` / `?full` force the lighter streamed scene or the full one (normally chosen for your GPU).
 - `?detail=1.2` fixes the splat budget instead of adapting it to your frame rate.
 - `?debug` (both games) exposes the game state on `window` and turns on `P` for a freeze frame.
 
@@ -101,6 +101,12 @@ Everything is derived from the capture itself. There are no meshes and no hand-m
   - Undeveloped's gentle score (`src/case/music.js`): Karplus-Strong harp, pads and bass in slow major-key sections with rests between them.
 
 ## Performance
+
+Each game picks a version of the scan for the machine it's running on (`src/quality.js`):
+- **Full:** dedicated GPUs get every splat with full colour detail (225 MB).
+- **Lite:** integrated GPUs (Apple silicon, Intel, phones) get a chunked level-of-detail tree with degree-1 colour. Spark streams it, drawing about 1.25M splats, and only the chunks needed are downloaded.
+- **Fallback:** if the full scan turns out to be a slideshow while loading, the game switches to the lite one and remembers that.
+- **Overrides:** `?full` or `?lite` force either version.
 
 RESIDUE draws all 12.5M splats without LoD. On an RTX 2070 at 1080p it runs at about 55-60 fps. The render settings in `src/render-config.js` were tuned with a headless benchmark:
 - `tools/fitness.mjs` scores frame time and image quality against a high-budget reference;

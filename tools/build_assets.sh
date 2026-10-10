@@ -22,4 +22,11 @@ mv raw/lod/sanatorium.spz public/assets/
 (cd raw/lod && ../../ext/spark/rust/target/release/build-lod --quality --rad sanatorium.ply)
 rm raw/lod/sanatorium.ply
 mv raw/lod/sanatorium-lod* public/assets/
+# lite scene for integrated GPUs (src/quality.js): degree-1 colour, chunked LoD tree streamed by
+# Spark's pager. Slimming the PLY first keeps build-lod's memory use down.
+mkdir -p raw/lite public/assets/lite
+.venv/bin/python -I tools/slim_ply.py raw/clean.ply raw/lite/sanatorium-lite.ply
+(cd raw/lite && ../../ext/spark/rust/target/release/build-lod --quality --rad-chunked --max-sh=1 sanatorium-lite.ply)
+mv raw/lite/sanatorium-lite-lod* public/assets/lite/
+rm raw/lite/sanatorium-lite.ply
 echo "done: $(du -sh public/assets | cut -f1) in public/assets"
