@@ -27,6 +27,16 @@ Open the printed URL in Chrome, Edge or Firefox on a desktop with a dedicated GP
 
 It needs Python 3, Rust/cargo (to build Spark's `build-lod`) and about 10 GB of scratch disk.
 
+### Deploying
+
+The hosted build runs on Cloudflare. The site goes to Pages, and the scan goes to an R2 bucket, because it's too big for a Pages file. A small Pages Function (`functions/scan/[name].js`) streams the scan back on the same domain. After a one-time `npx wrangler login`, deploying is one command:
+
+```bash
+npm run deploy
+```
+
+`tools/deploy.sh` builds the site, uploads the scan only when it has changed, and publishes to the `gaussiangames` Pages project. The `?lod` scene isn't part of the hosted build.
+
 ### RESIDUE
 
 | Key | Action |

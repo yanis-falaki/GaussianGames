@@ -1,0 +1,9 @@
+# Cloudflare Pages project for the hosted build (see tools/deploy.sh, `npm run deploy`)
+name = "gaussiangames"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-09-01"
+
+# the scan, too big for a Pages static file, is served by functions/scan/[name].js
+[[r2_buckets]]
+binding = "SCANS"
+bucket_name = "gaussiangames-scans"

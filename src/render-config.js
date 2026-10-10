@@ -32,6 +32,7 @@ export const RENDER = {
   focalAdjustment: 2.0,
   // Every original splat (12.5M, no LoD), like SuperSplat draws it. The LoD tree's merged splats were
   // visibly blurrier; with on-demand regeneration the full set holds ~51-53fps at 1080p on an RTX 2070.
-  scene: "assets/sanatorium.spz",
+  // (a hosted build serves it from elsewhere: VITE_SCAN_URL, see tools/deploy.sh)
+  scene: import.meta.env?.VITE_SCAN_URL || "assets/sanatorium.spz",
   lodScene: "assets/sanatorium-lod.rad", // ?lod : budgeted level-of-detail fallback for weaker GPUs
 };
