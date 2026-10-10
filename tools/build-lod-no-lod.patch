@@ -1,0 +1,42 @@
+diff --git a/rust/build-lod/src/main.rs b/rust/build-lod/src/main.rs
+index 0b06ffd..4c003dd 100644
+--- a/rust/build-lod/src/main.rs
++++ b/rust/build-lod/src/main.rs
+@@ -54,6 +54,7 @@ enum BuildLodMethod {
+ #[derive(Clone, Debug, Default)]
+ struct BuildLodOptions {
+     unlod: bool,
++    no_lod: bool,
+     tsplat: BuildLodTsplat,
+     method: BuildLodMethod,
+     max_sh: Option<usize>,
+@@ -209,6 +210,18 @@ fn process_file_lod_tsplat<TS: SplatReceiver + TsplatArray + SplatGetter>(filena
+         description.insert("unlod".to_string(), serde_json::Value::Bool(true));
+     }
+ 
++    if options.no_lod {
++        // write every input splat as-is (no LoD tree) to <name>.spz
++        let mut out = filename.to_string();
++        if let Some(dot) = out.rfind('.') { out.truncate(dot); }
++        let filename_ext = format!("{}.spz", out);
++        let bytes = SpzEncoder::new(splats).encode().unwrap();
++        let mut writer = BufWriter::new(File::create(&filename_ext).unwrap());
++        writer.write_all(&bytes).unwrap();
++        println!("Wrote {} ({} bytes), no LoD", filename_ext, bytes.len());
++        return;
++    }
++
+     let method = match options.method.clone() {
+         BuildLodMethod::Quick => BuildLodMethod::TinyLod { lod_base: 1.5 },
+         BuildLodMethod::Quality => BuildLodMethod::BhattLod { lod_base: 1.75 },
+@@ -428,6 +441,10 @@ fn main() {
+     let mut filenames = Vec::new();
+ 
+     for arg in args {
++        if arg == "--no-lod" {
++            options.no_lod = true;
++            continue;
++        }
+         if arg == "--unlod" {
+             options.unlod = true;
+             println!("Using --unlod: Un-LoD file by removing nodes with children");

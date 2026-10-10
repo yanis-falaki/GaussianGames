@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Undeveloped · Gaussian Games</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='8' width='22' height='16' rx='2' fill='%23f4efe4' stroke='%2324211c' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='none' stroke='%2324211c' stroke-width='2'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Caveat:wght@500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/src/case/case.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<!-- viewfinder (camera raised) -->
+<div id="viewfinder" hidden>
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="vf-center"></div>
+  <div class="vf-info"><span id="vf-focus">no subject</span><span id="vf-count"></span></div>
+</div>
+<div id="shutter"></div>
+<div id="dot"></div>
+<div id="hint"></div>
+<div id="toast"></div>
+<div id="develop-in"></div>
+
+<div id="hud">
+  <div><kbd>RMB</kbd> camera &nbsp; <kbd>LMB</kbd> shoot &nbsp; <kbd>E</kbd> examine &nbsp; <kbd>Tab</kbd> case notebook &nbsp; <kbd>M</kbd> menu</div>
+  <div id="hud-progress"></div>
+</div>
+
+<!-- intro -->
+<section class="screen" id="title">
+  <a class="menulink" href="./">&larr; all games</a>
+  <div class="folder">
+    <div class="stamp">MISSING PERSON</div>
+    <h1>Undeveloped</h1><div class="subtitle">Case file: Haus Lindenhof</div>
+    <div class="file-meta" id="brief"></div>
+    <div class="row">
+      <button id="start" disabled>Loading scan</button>
+      <button class="fsbtn">Fullscreen</button>
+    </div>
+    <div id="progress"></div>
+    <div class="keys">
+      <kbd>WASD</kbd> walk · <kbd>Shift</kbd> run · <kbd>RMB</kbd> raise camera · <kbd>LMB</kbd> take photo ·
+      <kbd>E</kbd> examine · <kbd>Tab</kbd> notebook · <kbd>M</kbd> menu
+    </div>
+    <div class="credits" id="credits"></div>
+  </div>
+</section>
+
+<section class="screen" id="pause" hidden>
+  <a class="menulink" href="./">&larr; all games</a>
+  <div class="folder small">
+    <h2>Paused</h2>
+    <div class="row"><button id="resume">Return</button><button class="fsbtn">Fullscreen</button><button id="music" class="ghost">Music: on</button></div>
+  </div>
+</section>
+
+<!-- document reader -->
+<section class="screen" id="doc" hidden>
+  <div class="paper"><div id="doc-body"></div><small>click or press E to put it back · it's been added to your notebook</small></div>
+</section>
+
+<!-- case notebook -->
+<section class="screen" id="notebook" hidden>
+  <div class="nb">
+    <header>
+      <div class="tabs" id="nb-tabs"></div>
+      <button id="nb-close" title="Close (Tab)">Close</button>
+    </header>
+    <div class="nb-body">
+      <div class="nb-questions" id="nb-questions"></div>
+      <div class="nb-evidence">
+        <h3>Evidence <span id="nb-ev-count"></span></h3>
+        <div class="ev-grid" id="nb-evidence"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="ending" hidden><div class="paper wide" id="end-body"></div></section>
+
+<div id="frozen" hidden>frozen · P to resume</div>
+<script type="module" src="/src/case/main.js"></script>
+</body>
+</html>

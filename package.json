@@ -1,0 +1,21 @@
+{
+  "name": "gaussian-games",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Two first-person browser games built on one Gaussian-splat scan of an abandoned sanatorium: RESIDUE (horror) and Undeveloped (detective).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "assets": "tools/build_assets.sh"
+  },
+  "dependencies": {
+    "@sparkjsdev/spark": "^2.2.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.43.1",
+    "vite": "^7.3.7"
+  }
+}

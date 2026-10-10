@@ -1,0 +1,14 @@
+raw/
+*.zip
+node_modules/
+dist/
+.venv/
+public/assets/*.spz
+public/assets/*.bin
+public/assets/*.radc
+public/assets/*.rad
+ext/
+notes/
+__pycache__/
+bench/
+public/assets/bench/

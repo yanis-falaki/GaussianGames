@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RESIDUE · Gaussian Games</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23c0392b'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink: #d8d2c4; --dim: #8a857a; --red: #c0392b; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: var(--ink);
+    font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  canvas { display: block; }
+  [hidden] { display: none !important; }
+  .menulink { position: absolute; top: 22px; left: 28px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); text-decoration: none; }
+  .menulink:hover { color: var(--ink); }
+  .layer { position: fixed; inset: 0; pointer-events: none; }
+  #grain { opacity: .05; mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grain .4s steps(4) infinite; }
+  @keyframes grain { 0%{transform:translate(0,0)} 25%{transform:translate(-30px,20px)} 50%{transform:translate(20px,-30px)} 75%{transform:translate(-10px,-10px)} }
+  #vignette { background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.75) 100%); }
+  #hurt { background: radial-gradient(ellipse at center, transparent 30%, rgba(60,0,0,.9) 100%); opacity: 0; }
+  #flash { background: #fff; opacity: 0; }
+  body.camcorder #grain, body.camcorder #vignette { display: none; } /* the camcorder pass does its own */
+
+  #hud { position: fixed; left: 28px; bottom: 24px; font-size: 12px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--dim); pointer-events: none; opacity: 0; transition: opacity 1s; }
+  #hud .bar { width: 160px; height: 3px; background: rgba(255,255,255,.12); margin: 6px 0 12px; }
+  #hud .bar i { display: block; height: 100%; background: var(--ink); width: 100%; }
+  #hud .hrow { display: flex; align-items: center; gap: 8px; }
+  #hud kbd { border: 1px solid #4a463f; padding: 0 5px; font: inherit; font-size: 10px; color: #a9a397; letter-spacing: 0; }
+  #hud .sub { text-transform: none; letter-spacing: .06em; color: #6d685f; margin-left: 4px; }
+  #hud .status { margin-left: auto; text-transform: none; letter-spacing: .06em; color: #a9a397; }
+  #hud .bar.seg { background: repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 14px, transparent 14px 16px); height: 5px; }
+  #hud .bar.seg i { -webkit-mask: repeating-linear-gradient(90deg, #000 0 14px, transparent 14px 16px); mask: repeating-linear-gradient(90deg, #000 0 14px, transparent 14px 16px); }
+  #hud .bar.low i { background: #c0392b; animation: blink .9s steps(2) infinite; }
+  #hud .bar.off i { opacity: .45; }
+  #breathrow { transition: opacity .6s; }
+  #rec { position: fixed; right: 28px; top: 22px; font-size: 12px; letter-spacing: .15em; color: var(--dim);
+    pointer-events: none; opacity: 0; transition: opacity 1s; text-align: right; }
+  #rec b { color: var(--red); font-weight: 400; animation: blink 1.2s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0 } }
+  #prompt { position: fixed; left: 50%; top: 58%; transform: translateX(-50%); font-size: 12px;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--ink); opacity: 0; transition: opacity .4s;
+    pointer-events: none; text-shadow: 0 0 8px #000; }
+  #develop { position: fixed; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+    pointer-events: none; opacity: 0; transition: opacity .3s; }
+  #frozen { position: fixed; left: 50%; top: 24px; transform: translateX(-50%); font-size: 11px; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--ink); background: rgba(0,0,0,.55); padding: 6px 12px; pointer-events: none;
+    transition: opacity .4s; }
+  #dot { position: fixed; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; border-radius: 50%;
+    background: rgba(255,255,255,.35); pointer-events: none; }
+
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: safe center; text-align: center; background: rgba(0,0,0,.86); transition: opacity 1.2s; overflow-y: auto; padding-block: 24px; box-sizing: border-box; }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+  h1 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 400; font-size: clamp(48px, min(11vw, 15vh), 140px);
+    letter-spacing: .32em; margin: 0 0 0 .32em; color: #e9e3d6; filter: blur(.4px);
+    text-shadow: 6px 0 0 rgba(233,227,214,.12), -9px 0 0 rgba(233,227,214,.07), 18px 0 2px rgba(233,227,214,.05); }
+  .sub { color: var(--dim); letter-spacing: .3em; font-size: 12px; text-transform: uppercase; margin-top: 8px; }
+  .intro { max-width: 620px; margin: 40px auto 0; font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 21px; line-height: 1.55; color: #bdb6a7; padding: 0 24px; }
+  .intro p { opacity: 0; animation: fadein 1.6s forwards; margin: 0 0 14px; }
+  @keyframes fadein { to { opacity: 1 } }
+  button { margin-top: 36px; background: none; border: 1px solid #5d584f; color: var(--ink);
+    font: inherit; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; padding: 14px 30px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--ink); background: rgba(255,255,255,.04); }
+  button:disabled { color: #555; border-color: #333; cursor: wait; }
+  .btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  #fscorner { position: fixed; right: 18px; bottom: 18px; margin: 0; padding: 8px 10px; z-index: 5;
+    font-size: 16px; letter-spacing: 0; line-height: 1; border-color: #3c3934; color: #9b958a; background: rgba(0,0,0,.4); }
+  .keys { margin-top: 30px; color: #6d685f; font-size: 11px; letter-spacing: .12em; line-height: 2; }
+  .keys kbd { border: 1px solid #3c3934; padding: 1px 6px; font: inherit; color: #9b958a; }
+  .credits { margin-top: 28px; font-size: 10px; color: #5a564f; padding: 0 20px; max-width: 760px; line-height: 1.6; }
+  .credits a { color: #7c776d; }
+  #progress { margin-top: 18px; color: #6d685f; font-size: 11px; letter-spacing: .15em; height: 14px; }
+
+  #note { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.72); transition: opacity .8s; }
+  #note.hidden { opacity: 0; pointer-events: none; }
+  #note .card { max-width: 560px; padding: 40px 48px; background: #e7e1d3; color: #26231e;
+    font-family: "Cormorant Garamond", Georgia, serif; font-size: 21px; line-height: 1.5;
+    box-shadow: 0 30px 80px rgba(0,0,0,.8); transform: rotate(-.6deg); filter: sepia(.25) contrast(1.05); margin: 20px; }
+  #note .card h2 { font-family: "IBM Plex Mono", monospace; font-weight: 400; font-size: 12px;
+    letter-spacing: .2em; text-transform: uppercase; margin: 0 0 18px; color: #6b6458; }
+  #note .card small { display: block; margin-top: 22px; font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    letter-spacing: .14em; color: #7d766a; text-transform: uppercase; }
+  #ending p { font-family: "Cormorant Garamond", Georgia, serif; font-size: 24px; color: #2a2722; max-width: 640px;
+    line-height: 1.5; opacity: 0; animation: fadein 2.5s forwards; padding: 0 24px; }
+  #ending { background: #f2efe8; }
+  #ending button { color: #2a2722; border-color: #b9b3a6; opacity: 0; animation: fadein 2s 11s forwards; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="layer" id="hurt"></div>
+<div class="layer" id="vignette"></div>
+<div class="layer" id="grain"></div>
+<div class="layer" id="flash"></div>
+<div id="dot"></div>
+<svg id="develop" viewBox="0 0 46 46"><circle cx="23" cy="23" r="20" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="1.5"/><circle id="devring" cx="23" cy="23" r="20" fill="none" stroke="#e8e2d4" stroke-width="1.5" stroke-dasharray="125.7" stroke-dashoffset="125.7" transform="rotate(-90 23 23)"/></svg>
+<div id="prompt"></div>
+<div id="frozen" hidden>frozen &nbsp;·&nbsp; P to resume</div>
+<div id="hud">
+  <div class="hrow"><span>Lamp</span><kbd>F</kbd><span class="sub">wind</span><kbd>R</kbd><span class="status" id="lampstat">on</span></div>
+  <div class="bar seg" id="lampbar"><i id="battery"></i></div>
+  <div id="breathrow">
+    <div class="hrow"><span>Breath</span><kbd>Shift</kbd><span class="status" id="breathstat"></span></div>
+    <div class="bar"><i id="stamina"></i></div>
+  </div>
+  <div id="count">Plates 0 / 6</div>
+  <div style="margin-top:10px">Frames left <span id="lives" style="letter-spacing:.3em;color:var(--ink)">●●●</span></div>
+</div>
+<div id="rec"><b>●</b> REC &nbsp;<span id="tc">23:00</span><br><span id="room"></span></div>
+
+<div class="screen" id="title">
+  <a class="menulink" href="./">&larr; all games</a>
+  <h1>RESIDUE</h1>
+  <div class="sub">the last night at haus lindenhof</div>
+  <div class="intro" id="intro"></div>
+  <div class="btns"><button id="start" disabled>Loading scan</button><button class="fsbtn">Fullscreen</button></div>
+  <div id="progress"></div>
+  <div class="keys">
+    <kbd>WASD</kbd> walk &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>C</kbd> crouch &nbsp; <kbd>F</kbd> / right-click lamp &nbsp; <kbd>R</kbd> (hold) wind the lamp &nbsp; <kbd>M</kbd> menu<br>
+    find the six plates (they only glow in the dark) and hold your lamp on them to develop them &nbsp;·&nbsp; listen for them &nbsp;·&nbsp; the lamp runs down fast · winding it is loud &nbsp;·&nbsp; headphones strongly recommended
+  </div>
+  <div class="credits" id="credits"></div>
+</div>
+
+<div class="screen hidden" id="pause">
+  <a class="menulink" href="./">&larr; all games</a>
+  <h1 style="font-size:64px">PAUSED</h1>
+  <div class="btns"><button id="resume">Return</button><button class="fsbtn">Fullscreen</button></div>
+  <div class="keys" id="pausekeys"><kbd>WASD</kbd> walk &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>C</kbd> crouch &nbsp; <kbd>F</kbd> / right-click lamp &nbsp; <kbd>R</kbd> (hold) wind the lamp &nbsp; <kbd>M</kbd> menu</div>
+</div>
+
+<div id="note" class="hidden"><div class="card"><h2 id="notetitle"></h2><div id="notetext"></div><small>click to continue</small></div></div>
+
+<div class="screen hidden" id="gameover"><h1 style="font-size:64px">LOST</h1><div class="intro"><p style="opacity:1">You stood still too long in the dark. On a plate somewhere, there is one more smear now.</p></div><button onclick="location.reload()">Walk again</button></div>
+<div class="screen hidden" id="ending"><div id="endtext"></div><button id="again">Walk again</button></div>
+
+<button id="fscorner" class="fsbtn" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
