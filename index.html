@@ -127,6 +127,9 @@
   .menu-veil.undeveloped { background: #f7f1e4; }
   .menu-veil.on { opacity: 1; transition: opacity .5s ease-in; }
 
+  /* touch-only devices (phones and tablets): the games want a keyboard and mouse */
+  @media (hover: none) and (pointer: coarse) { .note { display: block; } }
+
   /* phones: stack the two halves, the night on top */
   @media (max-width: 760px), (max-aspect-ratio: 4/5) {
     :root { --slant: 3%; }
@@ -189,7 +192,7 @@
     <span class="long">Scene: “URBEX: Sanatorium Inside – Part01” by Christoph Schindelar (<a href="https://superspl.at/scene/8429e5e2" target="_blank" rel="noopener">superspl.at</a>, CC BY-NC 4.0)
     &nbsp;·&nbsp; rendered with <a href="https://sparkjs.dev" target="_blank" rel="noopener">Spark</a></span>
     <span class="short">Scene by Christoph Schindelar (<a href="https://superspl.at/scene/8429e5e2" target="_blank" rel="noopener">CC BY-NC 4.0</a>)</span>
-    <span class="note">best on a desktop with a keyboard and mouse</span>
+    <span class="note">best on a desktop or laptop, with a keyboard and mouse</span>
   </footer>
 </main>
 <script type="module" src="/src/menu/main.js"></script>

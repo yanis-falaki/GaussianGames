@@ -17,10 +17,14 @@ import { Entity } from "./entity.js";
 import { Bulb, buildLightVis } from "./bulb.js";
 import { updateHud } from "./hud.js";
 import * as STORY from "./story.js";
+import { deviceGate } from "../shared/device.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has("debug") || params.has("bench");
+
+// no WebGL 2, or a phone / tablet: say so first (shared/device.js)
+await deviceGate({ theme: "night" });
 
 // ---------------------------------------------------------------------------- view
 const view = createView(params);

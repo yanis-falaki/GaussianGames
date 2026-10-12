@@ -18,10 +18,14 @@ import { Player } from "../shared/player.js";
 import { SCENE_CREDIT, UPPER_FLOORS, BOUNDARIES } from "../shared/scan.js";
 import * as CASE from "./case-file.js";
 import { createNotebook } from "./notebook.js";
+import { deviceGate } from "../shared/device.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has("debug");
+
+// no WebGL 2, or a phone / tablet: say so first (shared/device.js)
+await deviceGate({ theme: "day" });
 
 const view = createView({
   container: $("app"),
