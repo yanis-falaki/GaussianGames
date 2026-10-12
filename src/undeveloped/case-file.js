@@ -2,8 +2,32 @@
 // were picked with tools/author.mjs (world space, y-up). Fiction: names and events are invented.
 
 export const SPAWN = { x: 10.6, y: -1.5, z: 9.3, yaw: -1.35 };
-// Mara's footprints: the last stretch of the walk from the spawn to the upstairs landing
-export const TRAIL = { to: [-1.0, 2.25, 18.0], length: 15 };
+// Footprints in the dust (trail.js), leg by leg in the order of the story. Each leg runs from a
+// clue (or a point) to the clue it leads to, and is walked by mara | run (Mara running) | man |
+// dog. It appears once its chapter is open and `after` (if any) has been documented, and fades
+// once any of `done` (default: its `to`) has been. `say`: the caption when it appears.
+export const TRAILS = [
+  // I. Getting in: from the window she climbed through, along her tags, to the kitchen
+  { id: "in", chapter: 0, walker: "mara", from: "frame", to: "heart_pink_small" },
+  { id: "kitchen", chapter: 0, walker: "mara", from: "heart_pink_small", to: "heart_kitchen", after: "heart_pink_small",
+    done: ["heart_kitchen", "kettles"], say: "Her footprints go on, out of the hall and toward the kitchen." },
+  // II. Not alone: back to the hall, where someone had been at her heart; his boots; a dog
+  { id: "back", chapter: 1, walker: "mara", from: "kettles", to: "heart_traced",
+    say: "Her footprints lead back from the kitchen to the dining hall." },
+  { id: "him", chapter: 1, walker: "man", from: "heart_traced", to: "armchairs", after: "heart_traced",
+    say: "Bigger prints by the hearts. Heavy boots, a man's, going back across the hall." },
+  { id: "dog", chapter: 1, walker: "dog", from: "armchairs", to: "bowl", after: "armchairs",
+    done: ["bowl", "terrace_chair", "barrel", "notice"], say: "Paw prints around the armchairs. A dog came in from outside." },
+  // III. Where is Mara: what he dropped, her run, her hiding place, and where she went next
+  { id: "page", chapter: 2, walker: "man", from: "armchairs", to: "page",
+    say: "His boot prints go from the armchairs toward the window." },
+  { id: "run", chapter: 2, walker: "run", from: "heart_traced", to: "flipped",
+    say: "By the hearts her prints change: longer steps, toes dug in. She ran." },
+  { id: "up", chapter: 2, walker: "run", from: "flipped", to: "drawer", after: "flipped",
+    done: ["drawer", "room31_note"], say: "She kept running: out of the hall, and up the stairs." },
+  { id: "out", chapter: 2, walker: "mara", from: "drawer", to: "notice", after: "room31_note",
+    say: "Her footprints leave Room 31 again, walking now, back down the stairs." },
+];
 
 // doorway from the dining hall to the terrace (opened in the collision grid only; see main.js)
 export const TERRACE_DOOR = { x: 13.55, y: -1.55, z: 24.3, hx: 0.45, hz: 0.35, h: 2.4 };

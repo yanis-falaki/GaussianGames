@@ -1,5 +1,5 @@
 // Undeveloped: the entry point (undeveloped.html). Builds the view, loads the scan and the
-// collision world, lays Mara's footprints, wires up the controls and screens, and runs the frame
+// collision world, lays the footprint trails, wires up the controls and screens, and runs the frame
 // loop. Looking and photographing (framed(), examine, photos, evidence) are below; the notebook
 // is notebook.js and the case itself (clues, chapters, texts) case-file.js.
 import * as THREE from "three";
@@ -7,7 +7,7 @@ import { createView } from "./view.js";
 import { UndevelopedAudio } from "./audio.js";
 import { UndevelopedMusic } from "./music.js";
 import { Motes } from "./motes.js";
-import { trailRoute, buildTrail } from "./trail.js";
+import { Trails } from "./trail.js";
 import { bindFullscreenButtons, sinceLockChange } from "../shared/fullscreen.js";
 import { watchForSlowFrames, bindQualityButtons } from "../shared/quality.js";
 import { waitForSteadyFrames, showStreaming } from "../shared/splat-scene.js";
@@ -38,7 +38,7 @@ const audio = new UndevelopedAudio();
 const music = new UndevelopedMusic(audio);
 music.bindButton($("music"));
 const haze = new Haze(view.scene, camera);
-let world, player, motes, trail, trailMotes;
+let world, player, motes, trails, trailMotes;
 
 $("brief").innerHTML = CASE.BRIEF;
 $("credits").innerHTML = SCENE_CREDIT + "The case, its people and events are fiction.";
@@ -54,6 +54,7 @@ const state = {
   solved: CASE.CHAPTERS.map(() => false),
   pendingShot: false,
   chapterTab: 0,
+  idle: 0, sinceCue: 0, // seconds of play without progress / since the last cue (see lostCue)
 };
 
 async function load() {
@@ -72,14 +73,13 @@ async function load() {
   await view.mesh.initialized;
   watchForSlowFrames(view.quality); // if the full scan is a slideshow here, switch to the lite one
   motes = new Motes(view.scene, clues);
-  // Mara's footprints to the stairs, with a little glinting dust over a few of them
-  const route = trailRoute(world, new THREE.Vector3(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z), new THREE.Vector3(...CASE.TRAIL.to), CASE.TRAIL.length);
-  if (route) {
-    trail = buildTrail(world, route);
-    view.scene.add(trail.mesh);
-    trailMotes = new Motes(view.scene, trail.prints.filter((_, i) => i % 12 === 5).map((v, i) => ({ id: `trail${i}`, v, r: 0.05 })));
-    view.touch(5);
-  }
+  // the footprint trails, leg by leg, with a little glinting dust over some of the prints of
+  // the legs being followed
+  const at = (p) => (typeof p === "string" ? byId[p].v : new THREE.Vector3(...p));
+  trails = new Trails({ world, scene: view.scene, defs: CASE.TRAILS.map((d) => ({ ...d, from: at(d.from), to: at(d.to) })), onRegen: view.touch });
+  trailMotes = new Motes(view.scene, trails.legs.flatMap((leg) =>
+    leg.prints.filter((_, i) => i % 10 === 4).map((v, i) => ({ id: `${leg.def.id}:${i}`, leg: leg.def.id, v, r: 0.05 }))), { per: 26, strength: 0 });
+  updateTrails(true);
   // let Spark settle before we allow entry
   $("progress").textContent = "developing the scan";
   await waitForSteadyFrames(30, 30000);
@@ -156,6 +156,7 @@ function closeUI() {
   for (const id of ["doc", "notebook"]) $(id).hidden = true;
   state.ui = null;
   lock();
+  if (state.trailsPending) updateTrails();
 }
 
 function setRaised(on) {
@@ -259,16 +260,68 @@ function addEvidence(c, img) {
   const prev = state.evidence.get(c.id);
   if (!state.evidence.size) setTimeout(() => toast("Added to your case notebook. Press <b>Tab</b> to open it.", 6000), 1400);
   motes?.settle(c.id); // the dust settles once it's documented
+  if (!prev) progress();
   state.evidence.set(c.id, { id: c.id, label: c.label, room: c.room, kind: c.kind, note: c.note, doc: c.doc, img: img ?? prev?.img ?? null });
   updateHud();
+  updateTrails();
 }
 
-const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: updateHud });
+const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: () => { progress(); updateHud(); updateTrails(); } });
 
 function updateHud() {
   const n = state.evidence.size;
   const solved = state.solved.filter(Boolean).length;
   $("hud-progress").textContent = `Evidence ${n} · Chapters solved ${solved} / ${CASE.CHAPTERS.length}`;
+}
+
+// ---------------------------------------------------------------------------- trails
+// the chapter being worked on: the first one not yet confirmed
+const currentChapter = () => { const i = state.solved.indexOf(false); return i < 0 ? CASE.CHAPTERS.length - 1 : i; };
+const documented = (id) => state.evidence.has(id);
+
+// Which legs are showing follows the story: a chapter's legs once it is open (and their `after`
+// clue documented), faded once what they lead to is documented or the chapter is confirmed.
+// While the notebook or a document is open nothing changes; it happens when you're back.
+function updateTrails(initial = false) {
+  if (!trails) return;
+  if (state.ui && !initial) { state.trailsPending = true; return; }
+  state.trailsPending = false;
+  const cur = currentChapter(), said = [];
+  for (const leg of trails.legs) {
+    const d = leg.def;
+    let want = "hidden";
+    if (d.chapter < cur || state.solved[d.chapter]) want = "faded"; // the story so far
+    else if (d.chapter === cur && (!d.after || documented(d.after))) want = (d.done ?? [d.to]).some(documented) ? "faded" : "active";
+    const was = leg.state;
+    if (trails.set(d.id, want) && was === "hidden" && want === "active" && d.say && !initial) said.push(d.say);
+    trailMotes.set((m) => m.leg === d.id, want === "active" ? 1 : 0);
+  }
+  if (said.length) { progress(); setTimeout(() => toast(said.join("<br>"), 6000), 900); }
+}
+
+const progress = () => (state.idle = 0);
+
+// No progress for a while: say roughly where the open trail is, and let its prints catch the
+// light for a moment. With no trail open, point at what's missing (by room) or at the notebook.
+const LOST_AFTER = 75, CUE_EVERY = 50;
+function lostCue() {
+  state.sinceCue = 0;
+  const near = trails?.nearestActive(player.pos);
+  if (near && near.dist > 2.5) {
+    const p = near.print, dx = p.x - player.pos.x, dz = p.z - player.pos.z, dy = p.y - player.pos.y;
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+    const a = Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz) * 180 / Math.PI; // + = to the right
+    const where = dy > 1.5 ? "upstairs" : dy < -1.5 ? "downstairs" : Math.abs(a) < 35 ? "ahead of you" : Math.abs(a) > 125 ? "behind you" : a > 0 ? "to your right" : "to your left";
+    const whose = { mara: "Her footprints", run: "Her footprints", man: "The boot prints", dog: "The paw prints" }[near.leg.def.walker];
+    trails.pulse(5);
+    return toast(`${whose} go on from about ${Math.max(3, Math.round(Math.hypot(dx, dz)))} m ${where}.`, 5000);
+  }
+  if (near) { trails.pulse(5); return toast("Look down: the footprints go on from here.", 4500); }
+  const ch = CASE.CHAPTERS[currentChapter()];
+  const missing = ch.questions.flatMap((q) => Object.values(q.blanks)).filter((b) => b.type === "evidence" && !b.answer.some(documented));
+  if (!missing.length) return toast("You may have everything this chapter needs. Open the case notebook: <b>Tab</b>.", 5000);
+  const room = byId[missing[0].answer[0]].room;
+  toast(`Something in the ${room.toLowerCase().replace(/^room/, "Room")} still needs a closer look.`, 5000);
 }
 
 // ---------------------------------------------------------------------------- frame
@@ -314,12 +367,17 @@ renderer.setAnimationLoop(() => {
     updateViewfinder();
     updateHint(dt);
     // the first time you come across the footprints
-    if (trail && !state.sawTrail && trail.prints.some((p) => p.distanceToSquared(player.pos) < 2.2 && Math.abs(p.y - player.pos.y) < 0.6)) {
+    if (trails && !state.sawTrail && trails.activePrints().some((p) => p.distanceToSquared(player.pos) < 2.2 && Math.abs(p.y - player.pos.y) < 0.6)) {
       state.sawTrail = true;
-      toast("Footprints in the dust. Small, recent. They lead to the stairs.", 5000);
+      toast("Footprints in the dust, small and fresh. Hers: they lead away from the window.", 5500);
+    }
+    if (!state.ui && !state.paused) {
+      state.idle += dt; state.sinceCue += dt;
+      if (state.idle > LOST_AFTER && state.sinceCue > CUE_EVERY) lostCue();
     }
     audio.update(dt, camera);
   }
+  if (player) trails?.update(dt, player.pos);
   motes?.update(dt, clock.elapsedTime, renderer.domElement.height);
   trailMotes?.update(dt, clock.elapsedTime, renderer.domElement.height);
   haze.update(clock.elapsedTime);
@@ -369,7 +427,7 @@ function setupDev() {
   const ray = new THREE.Raycaster();
   window.THREE = THREE;
   window.dev = {
-    get world() { return world; }, get player() { return player; }, get motes() { return motes; }, get trail() { return trail; }, camera, view, state, clues,
+    get world() { return world; }, get player() { return player; }, get motes() { return motes; }, get trails() { return trails; }, camera, view, state, clues,
     pose(x, y, z, yaw, pitch = 0) {
       player.pos.set(x, y, z); player.targetY = y; player.yaw = yaw; player.pitch = pitch;
       player.update(0, {}); view.touch(3);

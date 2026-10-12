@@ -58,7 +58,7 @@ Everything is derived from the capture itself. There are no meshes and no hand-m
   Shading in the vertex shader means turning your head never regenerates the splat buffer.
 - **Collision and navigation** (`tools/assets/voxelize.py`, `src/shared/world.js`): splats are binned into an opacity-weighted 10 cm voxel grid. Floors are solid cells with free headroom above them. From the same grid come the player's walkable surfaces (stairs included), a nav graph with clearance-aware A* for the entity, and the line-of-sight tests.
 - **The plates:** patches of the real floor are shown as a glowing photographic negative. Under the lamp they develop into a warm positive with a smeared figure in it.
-- **Mara's footprints** (`src/undeveloped/trail.js`): in Undeveloped, splat shoe prints in pale dust are laid along a nav route to the stairwell, on the real floor and steps.
+- **Footprints** (`src/undeveloped/trail.js`): in Undeveloped, the trails left that day (Mara's shoes, walking and then running, a man's boots, a dog's paws) are splat prints in pale dust, laid leg by leg along nav routes from clue to clue, on the real floor and steps. A leg walks itself out when the story reaches it and fades once followed; a small dyno modifier per leg drives the reveal, the fade and the prints catching the light near you.
 - **The edge of the world** (`src/shared/edge-field.js`): where the capture runs out, splats ripple and dissolve, into black fog at night and into overexposed haze by day, driven by a distance field baked from the nav graph.
 - **The entity** (`src/residue/figure.js`, `src/residue/entity.js`):
   - **Body:** about 16,000 procedural Gaussians with a body-part ID packed into each splat's colour bits, posed on the GPU by a Spark dyno modifier.
