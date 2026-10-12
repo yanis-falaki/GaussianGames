@@ -24,15 +24,22 @@ function initSound(split) {
   let enabled = true;
   try { enabled = localStorage.getItem(STORE_KEY) !== "off"; } catch {}
 
-  let ctx = null, audio = null;
-  if (AC) {
+  // The context is made on the first press anywhere (browsers only let sound start after one;
+  // making it earlier just fills the console with autoplay warnings), or right away where the
+  // browser says autoplay is allowed.
+  let ctx = null, audio = null, failed = false, hovered = null, last = 0;
+  const ensure = () => {
+    if (ctx || failed || !AC) return;
     try {
       ctx = new AC();
       audio = new MenuAudio(ctx, { enabled, breathUrl: new URL("assets/audio/breathing.wav", document.baseURI).href });
       if (!enabled) ctx.suspend();
-    } catch (e) { console.warn("menu: audio unavailable", e); ctx = audio = null; }
-  }
-  if (new URLSearchParams(location.search).has("debug")) window.__menuAudio = audio; // console / tests
+      ctx.addEventListener("statechange", label);
+      last = ctx.currentTime;
+      if (hovered) audio.hover(hovered, false);
+      if (new URLSearchParams(location.search).has("debug")) window.__menuAudio = audio; // console / tests
+    } catch (e) { console.warn("menu: audio unavailable", e); ctx = audio = null; failed = true; }
+  };
 
   // ---- the sound switch, top-right
   let btn = null;
@@ -48,7 +55,7 @@ function initSound(split) {
     if (!ctx || !enabled || ctx.state === "running" || ctx.state === "closed") return;
     ctx.resume().then(label, () => {});
   };
-  if (ctx) {
+  if (AC) {
     btn = document.createElement("button");
     btn.type = "button";
     btn.className = "sound-toggle";
@@ -57,7 +64,10 @@ function initSound(split) {
       '<path class="waves" d="M10.8 5.6a3.2 3.2 0 0 1 0 4.8M12.6 3.8a5.8 5.8 0 0 1 0 8.4"/>' +
       '<path class="mute" d="M11 6l3.6 4M14.6 6L11 10"/></svg><span></span>';
     btn.addEventListener("click", () => {
-      if (audible()) {
+      const wasAudible = audible();
+      ensure();
+      if (!audio) return;
+      if (wasAudible) {
         enabled = false;
         audio.setEnabled(false);
         setTimeout(() => { if (!enabled && ctx.state === "running") ctx.suspend().then(label); }, 320);
@@ -70,22 +80,25 @@ function initSound(split) {
       label();
     });
     split.appendChild(btn);
-    ctx.addEventListener("statechange", label);
     label();
     requestAnimationFrame(() => btn.classList.add("ready"));
   }
+
+  try { if (navigator.getAutoplayPolicy?.("audiocontext") === "allowed") ensure(); } catch {}
 
   // ---- autoplay: hover isn't a gesture, so start on the first press anywhere (but the switch
   // handles its own presses)
   const onGesture = (e) => {
     if (btn && btn.contains(e.target)) return;
+    ensure();
     resume();
   };
   for (const ev of ["pointerdown", "keydown", "touchstart"]) addEventListener(ev, onGesture, { capture: true, passive: true });
 
   // ---- the beds' clock
-  let last = ctx ? ctx.currentTime : 0, hiddenStop = false;
-  if (ctx) setInterval(() => {
+  let hiddenStop = false;
+  setInterval(() => {
+    if (!ctx) return;
     const now = ctx.currentTime, dt = Math.min(0.5, now - last);
     last = now;
     if (ctx.state === "running" && dt > 0) audio.tick(dt);
@@ -98,7 +111,7 @@ function initSound(split) {
 
   // ---- hover: the same events as the visual split
   const running = () => ctx && ctx.state === "running";
-  const hover = (name, withSound) => { if (audio) try { audio.hover(name, withSound && running()); } catch (e) { console.warn(e); } };
+  const hover = (name, withSound) => { hovered = name; if (audio) try { audio.hover(name, withSound && running()); } catch (e) { console.warn(e); } };
   for (const side of document.querySelectorAll(".side")) {
     side.addEventListener("pointerenter", (e) => hover(side.dataset.pick, e.pointerType !== "touch"));
     side.addEventListener("focus", () => hover(side.dataset.pick, true));
