@@ -12,7 +12,7 @@ button { font: inherit; cursor: pointer; }
 #dot { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(255,255,255,.7); box-shadow: 0 0 0 1px rgba(0,0,0,.4); pointer-events: none; }
 #hint { position: fixed; left: 50%; top: calc(50% + 22px); transform: translateX(-50%); font: 12px "IBM Plex Mono", monospace; letter-spacing: .08em;
   background: var(--ui); padding: 4px 10px; border-radius: 3px; opacity: 0; transition: opacity .2s; pointer-events: none; }
-#toast { position: fixed; z-index: 50; left: 50%; bottom: 72px; transform: translateX(-50%); max-width: min(560px, 86vw); text-align: center;
+#toast { position: fixed; z-index: 50; left: 50%; bottom: 96px; transform: translateX(-50%); max-width: min(560px, 86vw); text-align: center;
   background: var(--ui); padding: 10px 16px; border-radius: 4px; font-size: 14px; line-height: 1.45; opacity: 0; transition: opacity .4s; pointer-events: none; }
 #hud { position: fixed; left: 18px; bottom: 16px; font: 12px "IBM Plex Mono", monospace; color: rgba(255,255,255,.85); text-shadow: 0 1px 3px #000;
   opacity: 0; transition: opacity 1s; pointer-events: none; line-height: 1.8; }
@@ -26,7 +26,7 @@ button { font: inherit; cursor: pointer; }
 #viewfinder .bl { left: 0; bottom: 0; border-right: 0; border-top: 0; }
 #viewfinder .br { right: 0; bottom: 0; border-left: 0; border-top: 0; }
 #viewfinder .vf-center { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px; border: 1.5px solid rgba(255,255,255,.75); border-radius: 50%; }
-#viewfinder .vf-info { position: absolute; left: 0; right: 0; bottom: -26px; display: flex; justify-content: space-between; font: 12px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; text-shadow: 0 1px 3px #000; }
+#viewfinder .vf-info { position: absolute; left: 48px; right: 48px; bottom: 8px; display: flex; justify-content: space-between; font: 12px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; text-shadow: 0 1px 3px #000; }
 #viewfinder.hot .c, #viewfinder.hot .vf-center { border-color: #ffd36b; }
 #viewfinder.hot #vf-focus { color: #ffd36b; }
 /* the bracket that closes around what's in frame */
@@ -215,3 +215,5 @@ button { font: inherit; cursor: pointer; }
 #intro.on::before { opacity: 1; }
 /* the last photo's print steps aside for the notebook, documents and the ending */
 body:has(#notebook:not([hidden])) #print, body:has(#doc:not([hidden])) #print, body:has(#ending:not([hidden])) #print { opacity: 0; }
+/* camera raised: the viewfinder takes the screen and the HUD steps out of its way */
+body.raised #hud { opacity: 0 !important; }

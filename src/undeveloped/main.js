@@ -250,6 +250,7 @@ function setRaised(on) {
   state.raised = on;
   $("viewfinder").hidden = !on;
   if (!on) $("vf-target").classList.remove("on");
+  document.body.classList.toggle("raised", on);
   $("dot").hidden = on;
   audio.click();
 }
