@@ -40,53 +40,77 @@ You have the afternoon. Photograph what matters, read what was left behind, and 
 
 // kind: photo (take a picture of it) | doc (examine with E: a readable document, also photographable)
 // r: rough object radius (m); range: max distance to photograph it
+// glow: the region whose splats light up when it's framed or photographed (view.js): centre `at`
+// (default: pos) and half extents `ext` (m, an ellipsoid), and optionally only the splats that
+// stand out by colour from what's around them: key "sat" (paint), "lum" (white paper, a white
+// frame) or "warm" (wood on a cool floor), above threshold t
 export const CLUES = [
   // --- dining hall
   { id: "frame", label: "Window frame on the floor", room: "Dining hall", pos: [11.8, -1.32, 10.39], r: 0.6, range: 6,
+    glow: { at: [12.15, -1.36, 10.05], ext: [0.78, 0.14, 0.5], key: "lum", t: 0.5 },
     note: "A whole window frame, lifted off its hinges and laid down. Not smashed. Someone climbed in here." },
   { id: "armchairs", label: "Armchairs facing the window", room: "Dining hall", pos: [13.0, -0.93, 11.86], r: 0.6, range: 6,
+    glow: { at: [12.9, -1.0, 11.2], ext: [0.6, 0.62, 0.95] },
     note: "Two armchairs and a table dragged together, turned toward the open window. The dust on the seats is wiped." },
   { id: "flipped", label: "Overturned table", room: "Dining hall", pos: [15.3, -1.35, 14.91], r: 0.7, range: 7,
+    glow: { at: [14.9, -1.02, 14.95], ext: [0.58, 0.42, 0.58], key: "warm", t: 0.08 },
     note: "Knocked over recently. The dust beneath it is darker than the floor around it." },
   { id: "sheet", label: "Dust sheet on the floor", room: "Dining hall", pos: [12.98, -1.4, 13.05], r: 0.6, range: 6,
+    glow: { at: [13.4, -1.36, 12.65], ext: [0.55, 0.16, 0.65], key: "lum", t: 0.5 },
     note: "A dust sheet, dragged off something and dropped." },
   { id: "piano", label: "Grand piano", room: "Dining hall", pos: [11.9, -0.63, 6.79], r: 0.9, range: 8,
+    glow: { at: [11.85, -0.85, 5.85], ext: [0.8, 0.58, 1.05] },
     note: "Out of tune and covered in dust. Nobody has touched it in years." },
   { id: "extinguisher", label: "Fire extinguisher", room: "Dining hall", pos: [9.96, -1.19, 6.6], r: 0.3, range: 4.5,
+    glow: { ext: [0.18, 0.34, 0.18], key: "sat", t: 0.35 },
     note: "Standing loose in the middle of the floor, far from any bracket. Still sealed." },
   { id: "page", kind: "doc", label: "Torn notebook page", room: "Dining hall", pos: [9.66, -1.4, 10.51], r: 0.4, range: 3,
+    glow: { ext: [0.26, 0.1, 0.26], key: "lum", t: 0.55 },
     note: "Lying among the scattered old forms, but newer than any of them.",
     doc: `<h2>Torn notebook page</h2><p class="hand blue">Bergklinik — 12 May &nbsp;&#9825;<br/>Glaswerk Süd — 9 June &nbsp;&#9825;<br/>Hotel am See — 21 July &nbsp;&#9825;<br/><b>Lindenhof — Sat 3 Aug</b></p><p class="hand blue">she always goes in through a window.<br/>she always signs the walls.<br/>be there first. wait.</p><p class="small">Blue ballpoint. Every heart is drawn in the same blue.</p>` },
   { id: "heart_pink_small", label: "Small pink heart", room: "Dining hall", pos: [7.3, -0.21, 19.0], r: 0.25, range: 5,
+    glow: { ext: [0.3, 0.3, 0.3], key: "sat", t: 0.35 },
     note: "A small heart in bright pink spray paint. The paint is fresh; it smells faintly." },
   { id: "heart_traced", label: "Pink heart traced in blue", room: "Dining hall", pos: [7.09, -0.17, 18.17], r: 0.3, range: 5,
+    glow: { ext: [0.3, 0.38, 0.38], key: "sat", t: 0.35 },
     note: "A pink heart, gone over afterwards with a thick blue outline. Two different hands." },
   { id: "hearts_blue", label: "Blue hearts", room: "Dining hall", pos: [6.4, -0.26, 15.1], r: 0.6, range: 5,
+    glow: { ext: [0.35, 0.42, 0.75], key: "sat", t: 0.35 },
     note: "Two hearts in blue only. Shakier lines than the pink ones." },
   // --- kitchen
   { id: "heart_kitchen", label: "Pink heart on the steel table", room: "Kitchen", pos: [-1.39, -0.65, -0.18], r: 0.25, range: 4,
+    glow: { ext: [0.28, 0.12, 0.28], key: "sat", t: 0.35 },
     note: "The same small pink heart, sprayed on the steel table." },
   { id: "kettles", label: "Steam kettles, lids open", room: "Kitchen", pos: [-0.87, -0.26, 1.41], r: 0.7, range: 5,
+    glow: { at: [0.0, -0.55, 1.4], ext: [1.0, 0.55, 0.6] },
     note: "The lids have been lifted recently. There are clean finger marks in the dust on the rims, the kind a photographer leaves setting up a shot." },
   // --- terrace
   { id: "bowl", label: "Dog bowl", room: "Terrace", pos: [15.29, -1.61, 24.7], r: 0.2, range: 3.5,
+    glow: { at: [15.33, -1.6, 24.67], ext: [0.2, 0.12, 0.2] },
     note: "A dented dog bowl with a little rainwater in it. Not years old." },
   { id: "terrace_chair", label: "Chair by the wall", room: "Terrace", pos: [15.11, -1.11, 25.74], r: 0.4, range: 4,
+    glow: { at: [15.11, -1.15, 25.74], ext: [0.36, 0.5, 0.36], key: "warm", t: 0.08 },
     note: "A cane chair with a flattened cushion. Someone sits here often." },
   { id: "barrel", label: "Rain barrel", room: "Terrace", pos: [13.32, -1.19, 25.09], r: 0.4, range: 4,
+    glow: { ext: [0.36, 0.36, 0.36] },
     note: "Half a wine barrel, set under the gutter. Someone collects water here." },
   { id: "notice", kind: "doc", label: "Notice in the window", room: "Terrace", pos: [12.5, -0.18, 24.76], r: 0.25, range: 3,
+    glow: { ext: [0.26, 0.26, 0.26], key: "lum", t: 0.55 },
     note: "A sheet of paper taped to the inside of the glass, facing out.",
     doc: `<h2>Notice taped in the window</h2><p class="hand">PLEASE KNOCK.<br/>Somebody lives here.<br/>Caravan behind the hedge.<br/>— Henrik &amp; Bruno<br/><small>(dog is friendly)</small></p>` },
   // --- room 31, upstairs
   { id: "drawer", label: "Drawer on the floor", room: "Room 31", pos: [0.77, 2.39, 25.16], r: 0.35, range: 3.5,
+    glow: { ext: [0.32, 0.16, 0.32] },
     note: "Pulled all the way out and set down, not thrown. Something was hidden in it." },
   { id: "room31_note", kind: "doc", label: "Note in the drawer", room: "Room 31", pos: [0.77, 2.45, 25.16], r: 0.3, range: 2.2,
+    glow: { ext: [0.22, 0.12, 0.22], key: "lum", t: 0.45 },
     note: "A page torn from a pocket notebook, folded small, tucked under the drawer's lining.",
     doc: `<h2>Folded page, in the drawer</h2><p class="hand">3 Aug, 16:20<br/>There's a man in the dining hall, sitting by the window I came in through. He drew over my heart in blue. I think it's the one from the comments, the one who knows where I'm going before I post.<br/>I'm not going back past him. The man with the dog on the terrace said I can wait at his place until it's safe.<br/>If you're the police: ask for Henrik. Not online. Don't post this. — M.</p>` },
   { id: "pinktable", label: "Pink table", room: "Room 31", pos: [1.25, 3.03, 24.91], r: 0.45, range: 4,
+    glow: { at: [1.35, 2.75, 24.85], ext: [0.46, 0.46, 0.46] },
     note: "A round table with a pink top. Fresh hand prints in the dust: someone leaned on it." },
   { id: "wardrobe", label: "Wardrobe", room: "Room 31", pos: [-0.39, 3.44, 24.31], r: 0.7, range: 4,
+    glow: { at: [-0.38, 3.15, 23.8], ext: [0.55, 0.95, 0.45] },
     note: "Doors hanging open. Big enough to hide in." },
 ];
 

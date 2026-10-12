@@ -44,7 +44,11 @@ $("brief").innerHTML = CASE.BRIEF;
 $("credits").innerHTML = SCENE_CREDIT + "The case, its people and events are fiction.";
 
 // ---------------------------------------------------------------------------- state
-const clues = CASE.CLUES.map((c) => ({ ...c, kind: c.kind ?? "photo", v: new THREE.Vector3(...c.pos) }));
+const KEYS = { sat: 1, lum: 2, warm: 3 };
+const clues = CASE.CLUES.map((c) => ({ ...c, kind: c.kind ?? "photo", v: new THREE.Vector3(...c.pos),
+  // the region that glows when it's framed or photographed (view.js setHighlight)
+  hv: new THREE.Vector3(...(c.glow?.at ?? c.pos)), ext: new THREE.Vector3(...(c.glow?.ext ?? [c.r * 1.2, c.r * 1.2, c.r * 1.2])),
+  key: c.glow?.key ? [KEYS[c.glow.key], c.glow.t] : null }));
 const byId = Object.fromEntries(clues.map((c) => [c.id, c]));
 const state = {
   started: false, paused: true, frozen: false, ui: null, // ui: null | "doc" | "notebook" | "ending"
@@ -162,6 +166,7 @@ function closeUI() {
 function setRaised(on) {
   state.raised = on;
   $("viewfinder").hidden = !on;
+  if (!on) $("vf-target").classList.remove("on");
   $("dot").hidden = on;
   audio.click();
 }
@@ -193,15 +198,16 @@ function toast(html, ms = 2600) {
 
 // ---------------------------------------------------------------------------- looking at things
 const tmp = new THREE.Vector3(), ndc = new THREE.Vector3(), camDir = new THREE.Vector3();
-// clues visible near the centre of view: [{clue, dist, off}]
-function framed(maxOff = 0.55) {
+// clues visible near the centre of view: [{clue, dist, off}]. reach: multiple of each clue's
+// photo range to look within
+function framed(maxOff = 0.55, reach = 1) {
   camera.updateMatrixWorld();
   camera.getWorldDirection(camDir);
   const out = [];
   for (const c of clues) {
     tmp.subVectors(c.v, camera.position);
     const dist = tmp.length();
-    if (dist > c.range + c.r || tmp.dot(camDir) <= 0) continue;
+    if (dist > (c.range + c.r) * reach || tmp.dot(camDir) <= 0) continue;
     ndc.copy(c.v).project(camera);
     const off = Math.max(Math.abs(ndc.x), Math.abs(ndc.y) * 0.8);
     if (off > maxOff) continue;
@@ -249,11 +255,56 @@ function capture() {
   ctx.drawImage(canvas, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, thumb.width, thumb.height);
   const img = thumb.toDataURL("image/jpeg", 0.85);
   const hits = framed(0.6).map((x) => x.clue);
-  const fresh = hits.filter((c) => !state.evidence.has(c.id) || !state.evidence.get(c.id).img);
-  if (!hits.length) return toast("Nothing notable in that shot.");
-  if (!fresh.length) return toast("You already have that.");
-  for (const c of fresh) addEvidence(c, img);
-  toast(`Added to the notebook: <b>${fresh.map((c) => c.label).join(", ")}</b>`, 3200);
+  const fresh = hits.filter((c) => !state.evidence.get(c.id)?.img);
+  // what was captured lights up: its own splats glow and a band of light sweeps up them
+  hits.slice(0, 3).forEach((c, i) => flashes.push({ clue: c, t: 0, slot: 1 + i, strength: fresh.includes(c) ? 1 : 0.45 }));
+  if (fresh.length) {
+    for (const c of fresh) addEvidence(c, img);
+    const one = fresh[0];
+    showPrint(img, fresh.length > 1 ? fresh.map((c) => c.label).join(" · ") : one.label,
+      fresh.length > 1 ? "All in your notebook now." : one.note, "Photographed");
+    return;
+  }
+  if (hits.length) return showPrint(img, hits[0].label, "You already have this one in your notebook.", "Already in the notebook", "dim");
+  // nothing that counts: say why, gently (too far, or not in the middle of the frame)
+  const far = framed(0.6, 2.4).find((x) => x.dist > x.clue.range + x.clue.r && !state.evidence.get(x.clue.id)?.img);
+  const edge = !far && framed(0.95).find((x) => !state.evidence.get(x.clue.id)?.img);
+  showPrint(img, "Nothing of note", far ? "Something's there, but too far away to make out. Get closer."
+    : edge ? "Something at the edge of the frame. Centre it." : "Nothing here tells you anything about Mara.", "", "none");
+}
+
+// the print that slides in after each photo: the frame, what it shows, and a line about it
+let printTimer = 0;
+function showPrint(img, title, line, kicker, mode = "") {
+  const el = $("print");
+  el.className = mode;
+  el.innerHTML = `<img src="${img}" alt=""><div>${kicker ? `<small>${kicker}</small>` : ""}<b>${title}</b><p>${line}</p></div>`;
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add("on"));
+  clearTimeout(printTimer);
+  printTimer = setTimeout(() => el.classList.remove("on"), mode === "none" ? 3200 : 5200);
+}
+
+// the photo highlight (view.js): slot 0 follows what the camera is aimed at, slots 1-3 flash
+// after the shutter
+const flashes = [];
+const aim = { clue: null, k: 0 };
+function updateHighlights(dt) {
+  // aiming: ease toward the subject in frame; a new subject takes over once the old one faded
+  const want = state.raised ? state.aimed : null;
+  if (want !== aim.clue) { aim.k -= dt * 5; if (aim.k <= 0) { aim.k = 0; aim.clue = want; } }
+  else if (aim.clue) aim.k = Math.min(1, aim.k + dt * 2.5);
+  const documentedAim = aim.clue && state.evidence.get(aim.clue.id)?.img;
+  view.setHighlight(0, aim.clue?.hv, aim.clue?.ext, aim.k * (documentedAim ? 0.35 : 1), -1, aim.clue?.key);
+  let focus = 0;
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    const f = flashes[i];
+    f.t += dt / 1.9;
+    if (f.t >= 1) { view.setHighlight(f.slot, null); flashes.splice(i, 1); continue; }
+    view.setHighlight(f.slot, f.clue.hv, f.clue.ext, f.strength, f.t, f.clue.key);
+    if (f.strength >= 1) focus = Math.max(focus, Math.min(1, f.t * 12) * (1 - f.t) ** 1.2);
+  }
+  view.setFocus(focus);
 }
 
 function addEvidence(c, img) {
@@ -325,12 +376,34 @@ function lostCue() {
 }
 
 // ---------------------------------------------------------------------------- frame
+// camera raised: what's in frame, close enough to count. The subject's contour glows faintly
+// (updateHighlights) and a bracket closes around it on screen
+const corner = new THREE.Vector3();
 function updateViewfinder() {
+  state.aimed = null;
   if (!state.raised) return;
   const f = framed(0.6);
   const fresh = f.filter((x) => !state.evidence.get(x.clue.id)?.img);
-  $("vf-focus").textContent = fresh.length ? "something worth a photo" : f.length ? "already photographed" : "no subject";
+  const subject = (fresh[0] ?? f[0])?.clue ?? null;
+  state.aimed = subject;
+  $("vf-focus").textContent = fresh.length ? "something worth a photo" : f.length ? "already in your notebook" : "no subject";
   $("viewfinder").classList.toggle("hot", fresh.length > 0);
+  const br = $("vf-target");
+  if (!subject) { br.classList.remove("on"); return; }
+  // the bracket: the subject's region projected to the screen
+  let x0 = 1, y0 = 1, x1 = -1, y1 = -1;
+  for (let i = 0; i < 8; i++) {
+    corner.set(i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1).multiply(subject.ext).multiplyScalar(0.75).add(subject.hv).project(camera);
+    x0 = Math.min(x0, corner.x); x1 = Math.max(x1, corner.x); y0 = Math.min(y0, corner.y); y1 = Math.max(y1, corner.y);
+  }
+  const cl = (v) => Math.max(-0.92, Math.min(0.92, v));
+  const L = (cl(x0) + 1) / 2 * innerWidth, R = (cl(x1) + 1) / 2 * innerWidth;
+  const T = (1 - cl(y1)) / 2 * innerHeight, B = (1 - cl(y0)) / 2 * innerHeight;
+  const w = Math.max(44, R - L), h = Math.max(44, B - T);
+  br.style.transform = `translate(${(L + R) / 2 - w / 2}px, ${(T + B) / 2 - h / 2}px)`;
+  br.style.width = `${w}px`; br.style.height = `${h}px`;
+  br.classList.add("on");
+  br.classList.toggle("known", !fresh.length);
 }
 
 let hintT = 0;
@@ -366,6 +439,7 @@ renderer.setAnimationLoop(() => {
     player.update(dt, { slow: state.raised ? 0.7 : 1 });
     updateViewfinder();
     updateHint(dt);
+    updateHighlights(dt);
     // the first time you come across the footprints
     if (trails && !state.sawTrail && trails.activePrints().some((p) => p.distanceToSquared(player.pos) < 2.2 && Math.abs(p.y - player.pos.y) < 0.6)) {
       state.sawTrail = true;
@@ -447,6 +521,34 @@ function setupDev() {
       this.pose(x, y, z, Math.atan2(-dx, -dz), Math.atan2(dy, Math.hypot(dx, dz)));
     },
     shoot() { state.pendingShot = true; },
+    // a standing spot on the floor from which clue `id` can be photographed (and read): within
+    // reach, in plain sight from eye height, preferring ~`want` metres away
+    vantage(id, want) {
+      const c = byId[id], eye = new THREE.Vector3();
+      want ??= Math.min(c.range * 0.6, c.kind === "doc" ? 1.3 : 2.4);
+      let best = null, bd = Infinity;
+      world.nav.forEach((n, i) => {
+        if (!world.navMain[i]) return;
+        const d = Math.hypot(n.x - c.v.x, n.z - c.v.z);
+        if (d < 0.5 || d > c.range * 0.85 || Math.abs(n.y - c.v.y) > 2.2) return;
+        eye.set(n.x, n.y + 1.62, n.z);
+        const p = c.v.clone().lerp(eye, Math.min(0.4, (c.r + 0.15) / eye.distanceTo(c.v)));
+        if (!world.lineOfSight(eye, p)) return;
+        const score = Math.abs(d - want) + world.navClear(i) * -0.2;
+        if (score < bd) { bd = score; best = [n.x, n.y, n.z]; }
+      });
+      return best;
+    },
+    // walk up to a clue (teleport), aim, and take a photo (or read it, for a document)
+    photograph(id) {
+      const from = this.vantage(id);
+      if (!from) return null;
+      this.lookAt(id, from);
+      if (byId[id].kind === "doc") { examine(); return { from, read: state.ui === "doc" }; }
+      state.pendingShot = true;
+      return { from };
+    },
+    closeUI, raise: (on = true) => setRaised(on),
     start() { $("start").click(); state.paused = false; player.enabled = true; $("pause").hidden = true; },
   };
   if (params.has("author")) $("title").hidden = true;

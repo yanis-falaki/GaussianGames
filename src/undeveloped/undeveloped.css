@@ -29,6 +29,26 @@ button { font: inherit; cursor: pointer; }
 #viewfinder .vf-info { position: absolute; left: 0; right: 0; bottom: -26px; display: flex; justify-content: space-between; font: 12px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; text-shadow: 0 1px 3px #000; }
 #viewfinder.hot .c, #viewfinder.hot .vf-center { border-color: #ffd36b; }
 #viewfinder.hot #vf-focus { color: #ffd36b; }
+/* the bracket that closes around what's in frame */
+#vf-target { position: fixed; left: 0; top: 0; width: 60px; height: 60px; pointer-events: none; opacity: 0; transition: opacity .25s; }
+#vf-target.on { opacity: 1; }
+#vf-target i { position: absolute; width: 13px; height: 13px; border: 2px solid #ffd36b; filter: drop-shadow(0 0 2px rgba(0,0,0,.5)); }
+#vf-target.known i { border-color: rgba(255,255,255,.5); }
+#vf-target .tl { left: 0; top: 0; border-right: 0; border-bottom: 0; }
+#vf-target .tr { right: 0; top: 0; border-left: 0; border-bottom: 0; }
+#vf-target .bl { left: 0; bottom: 0; border-right: 0; border-top: 0; }
+#vf-target .br { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+/* the print that slides in after each photo */
+#print { position: fixed; z-index: 40; top: 22px; right: 22px; width: 250px; background: #fbf8f1; color: var(--ink); padding: 8px 8px 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45); transform: translateX(calc(100% + 40px)) rotate(3deg); transition: transform .55s cubic-bezier(.3,.9,.3,1); pointer-events: none; }
+#print.on { transform: translateX(0) rotate(1.2deg); }
+#print img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; animation: develop 1.6s ease-out; }
+#print small { display: block; font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase; color: #8a6d1d; margin: 9px 2px 2px; }
+#print b { display: block; font-size: 15px; margin: 4px 2px 0; line-height: 1.3; }
+#print p { margin: 4px 2px 0; font-size: 12.5px; line-height: 1.45; color: #4b4438; }
+#print.none img, #print.dim img { filter: grayscale(.8) brightness(.9); }
+#print.none b { color: #7a7161; font-weight: 500; }
+@keyframes develop { from { filter: brightness(2.2) sepia(.6) blur(2px); } to { filter: none; } }
 
 /* ---------- screens */
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,9,8,.72); padding-block: 24px; box-sizing: border-box; overflow-y: auto; }
