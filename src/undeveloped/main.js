@@ -72,7 +72,11 @@ async function load() {
   view.setEdgeField(buildEdgeField(world));
   // calm investigator: no stamina, a natural walking pace, gentle starts/stops, very little bob
   player = new Player(camera, world, audio, canvas, { stamina: false, walk: 2.1, run: 3.8, accel: 7, decel: 9, bob: 0.35, roll: 0.04 });
-  player.spawn(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z, CASE.SPAWN.yaw);
+  // behind the title: the opening's first view, so the part of the building the game opens on is
+  // the part that streams in first (the opening then walks you to SPAWN)
+  const [ox, oy, oz, oyaw, opitch] = CASE.OPENING.path[0];
+  player.spawn(ox, oy, oz, oyaw);
+  player.pitch = opitch;
   $("progress").textContent = "loading scan";
   await view.mesh.initialized;
   watchForSlowFrames(view.quality); // if the full scan is a slideshow here, switch to the lite one
