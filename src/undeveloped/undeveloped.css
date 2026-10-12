@@ -39,7 +39,7 @@ button { font: inherit; cursor: pointer; }
 #vf-target .bl { left: 0; bottom: 0; border-right: 0; border-top: 0; }
 #vf-target .br { right: 0; bottom: 0; border-left: 0; border-top: 0; }
 /* the print that slides in after each photo */
-#print { position: fixed; z-index: 40; top: 22px; right: 22px; width: 250px; background: #fbf8f1; color: var(--ink); padding: 8px 8px 12px;
+#print { position: fixed; top: 22px; right: 22px; width: 250px; background: #fbf8f1; color: var(--ink); padding: 8px 8px 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.45); transform: translateX(calc(100% + 40px)) rotate(3deg); transition: transform .55s cubic-bezier(.3,.9,.3,1); pointer-events: none; }
 #print.on { transform: translateX(0) rotate(1.2deg); }
 #print img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; animation: develop 1.6s ease-out; }
@@ -121,7 +121,7 @@ button { font: inherit; cursor: pointer; }
 .nb-evidence { padding: 22px 22px; overflow-y: auto; }
 .nb-evidence h3 { margin: 0 0 14px; font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #6d6455; }
 .ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.ev-grid.picking .card { outline: 2px dashed #e2a11b; outline-offset: 2px; }
+.ev-grid.picking .card.pickable { outline: 2px dashed #e2a11b; outline-offset: 2px; }
 .card { background: #fff; border: 0; padding: 7px 7px 9px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,.15); display: flex; flex-direction: column; gap: 5px; transition: transform .15s; }
 .card:hover { transform: translateY(-2px) rotate(-.6deg); }
 .card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #222; }
@@ -141,5 +141,23 @@ button { font: inherit; cursor: pointer; }
 
 .menulink { position: fixed; top: 20px; left: 24px; font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: .2em; text-transform: uppercase; color: rgba(244,239,228,.6); text-decoration: none; }
 .menulink:hover { color: #f4efe4; }
-.nb-how { margin: 0 0 14px; font-size: 13px; color: #6f685c; font-style: italic; }
+/* the chapter's question, the story so far, and how the blanks work */
+.nb-head { margin: 0 0 18px; }
+.nb-question { margin: 0; font: 600 21px/1.3 "IBM Plex Sans", sans-serif; color: var(--ink); }
+.nb-intro { margin: 6px 0 0; font: 500 21px/1.3 "Caveat", cursive; color: #5b5244; }
+.nb-how { margin: 0 0 18px; font-size: 13px; line-height: 1.9; color: #6f685c; }
+.nb-how .blank.demo { font-size: 12px; padding: 1px 8px; cursor: default; }
+.blank .ask { font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; color: #8b8170; }
+.blank.evidence:not(.filled) .ask::before { content: "\25A2  "; }
+.blank.word:not(.filled) .ask::after { content: "  \25BE"; }
+.blank img { height: 26px; aspect-ratio: 16/9; object-fit: cover; vertical-align: -7px; margin-right: 7px; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.3); }
+.blank .docmark { display: inline-block; width: 18px; height: 22px; vertical-align: -5px; margin-right: 7px; background: repeating-linear-gradient(#fbf8f0 0 4px, #cfc6b2 4px 5px); box-shadow: 0 0 0 1px #b7ad97; }
+.q.ok .qn { color: #2f6b3a; font-size: 15px; padding-top: 6px; }
+.q.bad .qn { color: var(--red); }
+.q > div { flex: 1; min-width: 0; }
+.nudge { margin: 2px 0 0 !important; font-size: 14px !important; line-height: 1.5 !important; color: #8a3a22; }
+.nudge b { color: var(--ink); }
+#nb-next { background: #2f6b3a; color: var(--paper); border: 0; padding: 12px 22px; border-radius: 3px; font-weight: 500; letter-spacing: .03em; }
+.ev-grid.picking .card.unfit { opacity: .35; outline: 0; }
+.picker small { font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #8b8170; padding: 6px 12px 4px; }
 #doc.over-notebook { z-index: 30; cursor: pointer; }

@@ -114,44 +114,68 @@ export const CLUES = [
     note: "Doors hanging open. Big enough to hide in." },
 ];
 
-// Deduction notebook. Blanks: {type:"evidence", answer:[clue ids]} or {type:"word", options, answer}.
+// Deduction notebook. Each chapter: a question at the top, a short intro (the story so far), the
+// statements, and what it means once they all hold (`solved`).
+// Blanks: {type:"evidence", ask, answer:[clue ids]} or {type:"word", ask, options, answer}.
+//   ask: what goes in the blank, shown while it's empty ("photo" and "document" also limit which
+//   evidence can be picked); nudge: said when the blank is wrong (for evidence, after the room
+//   check: "that photo is from the terrace, not the kitchen"); wrong: {clue id: line} for
+//   tempting wrong answers; from (words): the clue that answers it. After a few failed checks
+//   the notebook names the clue that matters.
 export const CHAPTERS = [
   {
     title: "I. Getting in",
+    question: "How did Mara get in, and what was she doing here?",
+    intro: "Start where she would have started. Mara never uses doors, and she signs every place she shoots.",
     questions: [
-      { text: "She got into the building through {a}.", blanks: { a: { type: "evidence", answer: ["frame"] } } },
-      { text: "Her tag is a small {a} heart, like {b}.", blanks: {
-        a: { type: "word", options: ["pink", "blue", "black"], answer: "pink" },
-        b: { type: "evidence", answer: ["heart_kitchen", "heart_pink_small"] } } },
-      { text: "Before going deeper, she stopped to photograph {a}.", blanks: { a: { type: "evidence", answer: ["kettles"] } } },
+      { text: "She climbed in through a window in the dining hall. What she left behind: {a}", blanks: {
+        a: { type: "evidence", ask: "photo", answer: ["frame"], nudge: "Look for what she had to move out of the way to climb in." } } },
+      { text: "Her tag is a small heart in {a}. One she left untouched: {b}", blanks: {
+        a: { type: "word", ask: "colour", options: ["pink", "blue", "black"], answer: "pink", from: "heart_pink_small", nudge: "Look at a heart nobody has drawn over." },
+        b: { type: "evidence", ask: "photo", answer: ["heart_kitchen", "heart_pink_small"], nudge: "One of her hearts, exactly as she sprayed it.",
+          wrong: { heart_traced: "Look closer: someone else has drawn over that one.", hearts_blue: "Those aren't her colour." } } } },
+      { text: "Then she got to work. In the kitchen she set up a shot of {a}", blanks: {
+        a: { type: "evidence", ask: "photo", answer: ["kettles"], nudge: "Something in the kitchen a photographer's hands have touched, arranging it just so." } } },
     ],
-    solved: "Mara came in the way she always does, through a window. She tagged the walls and set up shots as usual. Nothing was wrong yet.",
+    solved: "Mara came in the way she always does, through a window, and signed the wall in pink. In the kitchen she lifted the kettle lids and set up her shot. She had no idea anyone else was in the building.",
   },
   {
     title: "II. Not alone",
+    question: "Who else was in the building that Saturday?",
+    intro: "Mara thought she had the place to herself. The dust says otherwise: her footprints lead back to the hall, and they aren't the only ones.",
     questions: [
-      { text: "Somebody has been living on the {a}. Proof: {b}.", blanks: {
-        a: { type: "word", options: ["terrace", "lounge", "kitchen", "upper floor"], answer: "terrace" },
-        b: { type: "evidence", answer: ["bowl", "terrace_chair", "barrel", "notice"] } } },
-      { text: "Someone traced over her tag in {a}: {b}.", blanks: {
-        a: { type: "word", options: ["blue", "pink", "black"], answer: "blue" },
-        b: { type: "evidence", answer: ["heart_traced"] } } },
-      { text: "That person waited in the hall, watching the window from {a}.", blanks: { a: { type: "evidence", answer: ["armchairs"] } } },
+      { text: "Someone lives here, out on the {a}. Proof: {b}", blanks: {
+        a: { type: "word", ask: "place", options: ["terrace", "kitchen", "upper floor", "lounge"], answer: "terrace", from: "notice", nudge: "Where do the paw prints lead?" },
+        b: { type: "evidence", ask: "photo", answer: ["bowl", "terrace_chair", "barrel", "notice"], nudge: "Something only a person who lives here would leave out." } } },
+      { text: "Someone else found her heart and went over it in {a}. Proof: {b}", blanks: {
+        a: { type: "word", ask: "colour", options: ["blue", "pink", "black"], answer: "blue", from: "heart_traced", nudge: "Not her colour: the other one on that wall." },
+        b: { type: "evidence", ask: "photo", answer: ["heart_traced"], nudge: "Two hands on one heart: hers first, then his.",
+          wrong: { hearts_blue: "Those are blue all through. Find the one that was pink first.", heart_pink_small: "That one is still just as she left it.", heart_kitchen: "That one is still just as she left it." } } } },
+      { text: "He was waiting for her, watching the window she would climb in by. He sat in {a}", blanks: {
+        a: { type: "evidence", ask: "photo", answer: ["armchairs"], nudge: "Follow his boot prints back from the hearts." } } },
     ],
-    solved: "Two other people were in the building that day: whoever lives on the terrace, and someone who got there before her and waited.",
+    solved: "Two other people were here that afternoon. A man lives on the terrace with his dog. And someone got here before Mara, sat facing the window she would come in by, and went over her heart in blue while he waited.",
   },
   {
     title: "III. Where is Mara?",
+    question: "What happened when she saw him, and where is she now?",
+    intro: "She came back from the kitchen and saw her heart painted over in blue. Then she saw him.",
     questions: [
-      { text: "The man in blue is {a}. He left {b}.", blanks: {
-        a: { type: "word", options: ["the man on the terrace", "a stranger who follows her trips", "a security guard", "another photographer she knew"], answer: "a stranger who follows her trips" },
-        b: { type: "evidence", answer: ["page"] } } },
-      { text: "When she saw him she ran, and knocked over {a}.", blanks: { a: { type: "evidence", answer: ["flipped"] } } },
-      { text: "She hid in {a} and left {b}.", blanks: {
-        a: { type: "word", options: ["Room 31", "the kitchen", "the lounge", "the stairwell"], answer: "Room 31" },
-        b: { type: "evidence", answer: ["room31_note"] } } },
-      { text: "Mara is now {a}.", blanks: { a: { type: "word", options: [
-        "hiding at the caravan behind the terrace", "still somewhere in the building", "with the man in blue", "back home"], answer: "hiding at the caravan behind the terrace" } } },
+      { text: "The man in blue is {a}. What he dropped proves it: {b}", blanks: {
+        a: { type: "word", ask: "who", options: ["the man from the terrace", "a stranger who follows her trips", "a security guard", "another photographer she knew"],
+          answer: "a stranger who follows her trips", from: "page", nudge: "Read what he wrote. How did he know where she would be, and when?" },
+        b: { type: "evidence", ask: "document", answer: ["page"], nudge: "Something written in blue ballpoint.",
+          wrong: { room31_note: "That's in her handwriting, not his.", notice: "That was written by whoever lives on the terrace." } } } },
+      { text: "She ran from him, and knocked over {a} on the way.", blanks: {
+        a: { type: "evidence", ask: "photo", answer: ["flipped"], nudge: "Her running footprints lead straight past it." } } },
+      { text: "She hid upstairs, in {a}, and left a note for whoever came looking: {b}", blanks: {
+        a: { type: "word", ask: "place", options: ["Room 31", "the kitchen", "the lounge", "the stairwell"], answer: "Room 31", from: "room31_note", nudge: "Where did her running footprints stop?" },
+        b: { type: "evidence", ask: "document", answer: ["room31_note"], nudge: "Something in her own handwriting, hidden where only a careful searcher would look." } } },
+      { text: "She is safe. Right now Mara is {a}. Where to find her: {b}", blanks: {
+        a: { type: "word", ask: "where", options: ["hiding at the caravan behind the terrace", "still somewhere in the building", "with the man in blue", "back home"],
+          answer: "hiding at the caravan behind the terrace", from: "notice", nudge: "Who offered her a place to wait, and where does he live?" },
+        b: { type: "evidence", ask: "document", answer: ["notice"], nudge: "Her note says who. Something else says where he lives.",
+          wrong: { room31_note: "Her note tells you who took her in, but not where he lives.", page: "That's his list, not hers." } } } },
     ],
     solved: null, // the ending
   },

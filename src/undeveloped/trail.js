@@ -164,14 +164,14 @@ function legModifier(uOpacity, uReveal) {
 const COLOR = new THREE.Color(0.93, 0.91, 0.86); // pale dust
 const FLAT = new THREE.Quaternion();             // prints are flat discs: no rotation needed
 
-// All the legs in the case. defs: case-file TRAILS with resolved `from` / `to` points.
-// onRegen(frames): ask the view to regenerate splats (opacity / reveal changed).
+// All the legs in the case. defs: case-file TRAILS; point(from | to): the world position (a
+// Vector3) of a clue id or [x, y, z]. onRegen(frames): ask the view to regenerate splats.
 export class Trails {
-  constructor({ world, scene, defs, onRegen }) {
+  constructor({ world, scene, defs, point, onRegen }) {
     this.onRegen = onRegen;
     this.legs = [];
     defs.forEach((def, i) => {
-      const route = legRoute(world, def.from, def.to);
+      const route = legRoute(world, point(def.from), point(def.to));
       if (!route) { console.warn(`[trail] no route for leg ${def.id}`); return; }
       const { splats, prints } = layPrints(world, route, def.walker, 31 + i * 97);
       const uOpacity = dyno.dynoFloat(0), uReveal = dyno.dynoFloat(0);

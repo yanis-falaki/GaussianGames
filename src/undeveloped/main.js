@@ -80,7 +80,7 @@ async function load() {
   // the footprint trails, leg by leg, with a little glinting dust over some of the prints of
   // the legs being followed
   const at = (p) => (typeof p === "string" ? byId[p].v : new THREE.Vector3(...p));
-  trails = new Trails({ world, scene: view.scene, defs: CASE.TRAILS.map((d) => ({ ...d, from: at(d.from), to: at(d.to) })), onRegen: view.touch });
+  trails = new Trails({ world, scene: view.scene, defs: CASE.TRAILS, point: at, onRegen: view.touch });
   trailMotes = new Motes(view.scene, trails.legs.flatMap((leg) =>
     leg.prints.filter((_, i) => i % 10 === 4).map((v, i) => ({ id: `${leg.def.id}:${i}`, leg: leg.def.id, v, r: 0.05 }))), { per: 26, strength: 0 });
   updateTrails(true);
@@ -157,6 +157,7 @@ $("nb-close").onclick = closeUI;
 function closeUI() {
   if (state.ui === "ending") return;
   $("doc").classList.remove("over-notebook");
+  notebook.close();
   for (const id of ["doc", "notebook"]) $(id).hidden = true;
   state.ui = null;
   lock();
@@ -317,7 +318,15 @@ function addEvidence(c, img) {
   updateTrails();
 }
 
-const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: () => { progress(); updateHud(); updateTrails(); } });
+const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: () => { progress(); updateHud(); updateTrails(); }, onFinish: showEnding });
+
+// ---------------------------------------------------------------------------- the ending
+function showEnding() {
+  const photos = [...state.evidence.values()].filter((e) => e.img).slice(0, 9);
+  $("end-body").innerHTML = CASE.ENDING + `<div class="end-photos">${photos.map((p) => `<img src="${p.img}">`).join("")}</div>
+    <div class="row"><button onclick="location.reload()">Start over</button></div>`;
+  $("ending").hidden = false;
+}
 
 function updateHud() {
   const n = state.evidence.size;
