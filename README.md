@@ -43,7 +43,7 @@ The same building is a horror game at night and a detective game by day.
 
 - **Real evidence:** every clue is an actual object in the scan (a window frame on the floor, a pink heart traced over in blue, a dog bowl on the terrace), and the photos in your notebook are the frames you took.
 - **Deduction:** the notebook poses each chapter as a question and statements with blanks, which you fill with evidence and keywords. A chapter is only confirmed when every statement holds; a wrong check marks what holds and nudges on the rest.
-- **Photos:** a bracket closes around what's worth a photo. After the shutter, what you caught lights up and its print slides in; if nothing counts, it says why (too far, or not centred).
+- **Photos:** a bracket closes around what's worth a photo, and a photo collects exactly what the bracket is on, one clue per shot. After the shutter, that clue lights up and its print slides in with the bracket on it; if nothing counts, it says why (too far, or not centred).
 - **The trails:** footprints in the dust (hers, a man's boots, a dog's paws) lead from clue to clue and up the stairwell, and each fades once what it leads to is documented.
 
 The title screens' **Graphics** button switches between the quality and performance versions of the scan. Developer switches (`?debug`, `?lite`, `?full`, `?detail=`, `?res=` and more) are listed in [CONTRIBUTING.md](CONTRIBUTING.md#developer-switches).
