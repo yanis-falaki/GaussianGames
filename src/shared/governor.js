@@ -114,12 +114,16 @@ export class Governor {
     this.settle = SETTLE_FRAMES;
     this.samples.length = this.intervals.length = 0;
     this.goodWindows = 0;
-    this.apply();
+    // Not now: decisions are made at the end of a frame, after it was drawn, and resizing the
+    // canvas clears it, so the browser would show that frame black. The next begin() applies it,
+    // before anything is drawn into the new buffer.
+    this.pendingApply = true;
     try { localStorage.setItem(KEY + this.tier, String(level)); } catch {}
   }
 
   // wrap the frame's GPU work: begin() before the first draw, end() after the last
   begin() {
+    if (this.pendingApply) { this.pendingApply = false; this.apply(); }
     if (!this.timer || !this.timing || this.query || this.pending.length >= 4) return;
     this.query = this.gl.createQuery();
     this.gl.beginQuery(this.timer.TIME_ELAPSED_EXT, this.query);

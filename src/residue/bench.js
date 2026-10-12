@@ -33,7 +33,7 @@ export function installBenchApi(ctx) {
   window.bench = {
     // frame pacing on the walk through the building, as the game renders it (cfg: optional
     // render settings to apply first, as for perf)
-    async walk({ cfg, seconds = 20, warmup = 3 } = {}) {
+    async walk({ cfg, seconds = 20, warmup = 3, checkBlack = false } = {}) {
       if (cfg) {
         if (ctx.governor) ctx.governor.enabled = false; // a fixed config: no adapting
         applyConfig(cctx, cfg);
@@ -43,7 +43,7 @@ export function installBenchApi(ctx) {
       regens = 0;
       const pages = countPageUploads(spark);
       const r = await walk({
-        renderer, seconds, warmup, regens: () => regens, governor: ctx.governor, frame: window.__benchRender, pose: (x, y, z, yaw) => pose(x, y, z, yaw),
+        renderer, seconds, warmup, checkBlack, regens: () => regens, governor: ctx.governor, frame: window.__benchRender, pose: (x, y, z, yaw) => pose(x, y, z, yaw),
         probe: () => ({ splats: spark.activeSplats, pixels: renderer.domElement.width * renderer.domElement.height }),
       });
       return { ...r, regens, pageUploads: pages(), quality: ctx.quality, ...(ctx.stats?.() ?? {}) };

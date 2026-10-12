@@ -629,11 +629,11 @@ async function setupBench() {
   view.spark.update = (a) => (regens++, update(a));
   const t0 = performance.now();
   window.bench = {
-    async walk({ seconds = 20, warmup = 3 } = {}) {
+    async walk({ seconds = 20, warmup = 3, checkBlack = false } = {}) {
       regens = 0;
       const pages = countPageUploads(view.spark);
       const r = await walk({
-        renderer, seconds, warmup, regens: () => regens, governor: view.governor,
+        renderer, seconds, warmup, checkBlack, regens: () => regens, governor: view.governor,
         pose(x, y, z, yaw) {
           player.pos.set(x, y, z); player.targetY = y; player.yaw = yaw; player.pitch = -0.1;
           player.update(0, {});

@@ -29,11 +29,30 @@ const avg = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
 // regens() (optional) counts splat regenerations, to split GPU time by frames with and without one.
 // governor (optional): the view's governor, which already times every frame on the GPU (two
 // timer queries can't nest, so the walk then takes its timings instead of making its own).
-export async function walk({ renderer, pose, frame, seconds = 20, warmup = 3, speed = 2.0, probe, regens, governor }) {
+// checkBlack: after each frame, read two rows of the canvas back and count frames that came out
+// entirely black (what the player would see flash).
+export async function walk({ renderer, pose, frame, seconds = 20, warmup = 3, speed = 2.0, probe, regens, governor, checkBlack = false }) {
   const gl = renderer.getContext();
   const tq = governor?.timer ? null : gl.getExtension("EXT_disjoint_timer_query_webgl2");
   const frames = [], cpu = [], gpu = [], gpuRegen = [], gpuPlain = [], pending = [], counters = {};
-  let longTasks = 0;
+  let longTasks = 0, black = 0, levelChanges = 0, blackAtChange = 0;
+  const row = new Uint8Array(4 * 8192);
+  const isBlack = () => {
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    let max = 0;
+    const pack = gl.getParameter(gl.PIXEL_PACK_BUFFER_BINDING); // Spark's async readbacks bind one
+    const fb = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    for (const y of [Math.floor(h / 3), Math.floor((2 * h) / 3)]) {
+      row.fill(0);
+      gl.readPixels(0, y, w, 1, gl.RGBA, gl.UNSIGNED_BYTE, row);
+      for (let i = 0; i < w * 4; i += 4) max = Math.max(max, row[i], row[i + 1], row[i + 2]);
+    }
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pack);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    return max <= 2;
+  };
   const lt = typeof PerformanceObserver !== "undefined" && PerformanceObserver.supportedEntryTypes?.includes("longtask")
     ? new PerformanceObserver((l) => (longTasks += l.getEntries().length)) : null;
   let measuring = false;
@@ -73,6 +92,12 @@ export async function walk({ renderer, pose, frame, seconds = 20, warmup = 3, sp
       pending.push({ q, regen: regens?.() !== r0 });
     } else frame();
     if (measuring) cpu.push(performance.now() - c0);
+    if (measuring && checkBlack) {
+      const lv = governor?.level, changed = governor && lv !== walk.lastLevel;
+      walk.lastLevel = lv;
+      if (changed) levelChanges++;
+      if (isBlack()) { black++; if (changed) blackAtChange++; }
+    }
   }
   lt?.disconnect();
   governor?.listeners.delete(feed);
@@ -98,6 +123,7 @@ export async function walk({ renderer, pose, frame, seconds = 20, warmup = 3, sp
     cpuP99: +pct(c, 0.99).toFixed(2),
     cpuMax: +(c[c.length - 1] ?? 0).toFixed(1),
     longTasks,
+    ...(checkBlack ? { black, levelChanges, blackAtChange } : {}),
   };
   for (const [k, v] of Object.entries(counters)) out[k] = Math.round(avg(v));
   return out;

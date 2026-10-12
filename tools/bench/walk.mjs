@@ -5,6 +5,7 @@
 //   --size 1536x864 --dpr 1.25    window size and devicePixelRatio (e.g. a laptop at 125%)
 //   --cpu 4                       throttle the main thread 4x (a slow laptop CPU)
 //   --seconds 20 --runs 1
+//   --black                       count frames that come out entirely black
 //   --cfgs file.json              RESIDUE only: walk once per render config in the file (see
 //                                 applyConfig in src/residue/bench.js), in one page load
 // Needs the bench server (tools/bench/server.sh start). Holds the machine-wide GPU lock, keeps
@@ -75,7 +76,7 @@ try {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpu });
   }
   for (const cfg of cfgs) for (let i = 0; i < runs; i++) {
-    const r = await page.evaluate((s, c) => window.bench.walk({ seconds: s, cfg: c ?? undefined }), seconds, cfg);
+    const r = await page.evaluate((s, c, b) => window.bench.walk({ seconds: s, cfg: c ?? undefined, checkBlack: !!b }), seconds, cfg, args.includes("--black"));
     console.log(JSON.stringify({ game, params: extra, cfg: cfg?.name, size: `${W}x${H}`, dpr, cpu, loadS, ...r }));
   }
 } finally {
