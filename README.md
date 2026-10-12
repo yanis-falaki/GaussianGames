@@ -2,6 +2,8 @@
 
 **▶ Play in your browser: [games.yanisfalaki.com](https://games.yanisfalaki.com)** · on a desktop or laptop, with a keyboard and mouse
 
+Join the [Discord](https://discord.gg/RZ7xWSVcHT) to share feedback, report bugs, or follow what comes next.
+
 ![The same dining hall at night in RESIDUE, then by day in Undeveloped](docs/night-to-day.gif)
 
 Two first-person games set entirely inside one real scan of an abandoned sanatorium: 12.5 million Gaussian splats, no meshes, no hand-made collision.
