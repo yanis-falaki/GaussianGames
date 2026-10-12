@@ -22,7 +22,7 @@ VITE_SCAN_URL=scan/sanatorium.spz npx vite build --logLevel warn
 # Pages can't hold files over 25MB: the single-file scan is served from R2; the single-file LoD tree
 # and bench data aren't hosted
 rm -f dist/assets/sanatorium.spz dist/assets/sanatorium-lod*
-rm -rf dist/assets/bench
+rm -rf dist/assets/bench dist/assets/full   # full/: an unused SH3 LoD build, not shipped
 big=$(find dist -type f -size +25M)
 [ -z "$big" ] || { echo "Files too big for Pages:"; echo "$big"; exit 1; }
 
