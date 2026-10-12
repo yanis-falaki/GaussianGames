@@ -108,3 +108,25 @@ export function driveLod(spark, scene, camera, mesh) {
 export function gpuSlowdown(params) {
   return Math.max(1, Math.min(16, Math.round(Number(params.get("gpux")) || 1)));
 }
+
+// How much of the detail Spark has picked for the current view is already resident (0..1), or
+// null before its level-of-detail system has run. The rest is still streaming in.
+export function streamedFraction(spark) {
+  const pager = spark.pager;
+  const want = pager?.fetchPriority?.slice(0, pager.maxPages ?? Infinity);
+  if (!want?.length) return null;
+  let have = 0;
+  for (const { splats, chunk } of want) if (pager.getSplatsChunk(splats, chunk)) have++;
+  return have / want.length;
+}
+
+// On the title screen: show how much of the building has streamed in (`el`, e.g. #progress),
+// until the view's detail is all there. The game can be entered at any time meanwhile.
+export function showStreaming(spark, el, label = "streaming the building") {
+  const timer = setInterval(() => {
+    const f = streamedFraction(spark);
+    if (f === null) return;
+    if (f >= 0.99) { el.textContent = ""; clearInterval(timer); }
+    else el.textContent = `${label}  ${Math.floor(f * 100)}%`;
+  }, 250);
+}

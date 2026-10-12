@@ -7,7 +7,7 @@ import { World } from "../shared/world.js";
 import { Player } from "../shared/player.js";
 import { BOUNDARIES, UPPER_FLOORS } from "../shared/scan.js";
 import { buildEdgeField } from "../shared/edge-field.js";
-import { createScanMesh, waitForSteadyFrames } from "../shared/splat-scene.js";
+import { createScanMesh, waitForSteadyFrames, showStreaming } from "../shared/splat-scene.js";
 import { toggleFullscreen, sinceLockChange } from "../shared/fullscreen.js";
 import { watchForSlowFrames, bindQualityButtons, gpuName } from "../shared/quality.js";
 import { createView } from "./view.js";
@@ -79,6 +79,7 @@ async function load() {
   $("progress").textContent = "";
   $("start").disabled = false;
   $("start").textContent = "Enter";
+  showStreaming(spark, $("progress")); // the rest of the detail keeps streaming in
   if (params.has("bench")) {
     const { installBenchApi } = await import("./bench.js");
     installBenchApi({ state, renderer, spark, camera, mesh: sanatorium, player, fx, entity, renderFrame, quality, stats: view.stats, governor: view.governor });

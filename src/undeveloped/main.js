@@ -10,7 +10,7 @@ import { Motes } from "./motes.js";
 import { trailRoute, buildTrail } from "./trail.js";
 import { bindFullscreenButtons, sinceLockChange } from "../shared/fullscreen.js";
 import { watchForSlowFrames, bindQualityButtons } from "../shared/quality.js";
-import { waitForSteadyFrames } from "../shared/splat-scene.js";
+import { waitForSteadyFrames, showStreaming } from "../shared/splat-scene.js";
 import { Haze } from "./haze.js";
 import { buildEdgeField } from "../shared/edge-field.js";
 import { World } from "../shared/world.js";
@@ -68,6 +68,7 @@ async function load() {
   // calm investigator: no stamina, a natural walking pace, gentle starts/stops, very little bob
   player = new Player(camera, world, audio, canvas, { stamina: false, walk: 2.1, run: 3.8, accel: 7, decel: 9, bob: 0.35, roll: 0.04 });
   player.spawn(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z, CASE.SPAWN.yaw);
+  $("progress").textContent = "loading scan";
   await view.mesh.initialized;
   watchForSlowFrames(view.quality); // if the full scan is a slideshow here, switch to the lite one
   motes = new Motes(view.scene, clues);
@@ -86,6 +87,7 @@ async function load() {
   $("progress").textContent = "";
   $("start").disabled = false;
   $("start").textContent = "Open the file";
+  showStreaming(view.spark, $("progress")); // the rest of the detail keeps streaming in
   if (DEBUG) setupDev();
   if (params.has("bench")) await setupBench();
 }
