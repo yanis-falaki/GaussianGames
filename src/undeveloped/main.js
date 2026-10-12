@@ -78,10 +78,12 @@ async function load() {
   // let Spark settle before we allow entry
   $("progress").textContent = "developing the scan";
   await waitForSteadyFrames(30, 30000);
+  view.governor.activate(); // from here resolution and detail follow the frame rate
   $("progress").textContent = "";
   $("start").disabled = false;
   $("start").textContent = "Open the file";
   if (DEBUG) setupDev();
+  if (params.has("bench")) await setupBench();
 }
 load().catch((e) => { console.error(e); $("progress").textContent = "failed to load: " + e.message; });
 
@@ -295,7 +297,7 @@ function updateHint(dt) {
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
-  if (state.frozen) return;
+  if (state.frozen || state.benching) return; // (the benchmark drives rendering itself)
   if (player && state.started && !params.has("author")) {
     // camera raised: slower, steadier, slight zoom
     state.zoom += ((state.raised ? 1 : 0) - state.zoom) * Math.min(1, dt * 8);
@@ -320,6 +322,41 @@ renderer.setAnimationLoop(() => {
   view.render();
   if (state.pendingShot) { state.pendingShot = false; capture(); }
 });
+
+// ---------------------------------------------------------------------------- benchmark (?bench)
+// window.bench.walk(): frame pacing on the shared walk through the building (shared/walk-bench.js)
+async function setupBench() {
+  const { walk, countPageUploads } = await import("../shared/walk-bench.js");
+  state.benching = true;
+  $("title").hidden = true;
+  let regens = 0;
+  const update = view.spark.update.bind(view.spark);
+  view.spark.update = (a) => (regens++, update(a));
+  const t0 = performance.now();
+  window.bench = {
+    async walk({ seconds = 20, warmup = 3 } = {}) {
+      regens = 0;
+      const pages = countPageUploads(view.spark);
+      const r = await walk({
+        renderer, seconds, warmup, regens: () => regens, governor: view.governor,
+        pose(x, y, z, yaw) {
+          player.pos.set(x, y, z); player.targetY = y; player.yaw = yaw; player.pitch = -0.1;
+          player.update(0, {});
+        },
+        frame() {
+          const t = (performance.now() - t0) / 1000;
+          haze.update(t);
+          view.spark.material.uniforms.cfTime.value = t;
+          view.spark.material.uniforms.cfPlayer.value.copy(player.pos);
+          view.render();
+        },
+        probe: () => ({ splats: view.spark.activeSplats, pixels: canvas.width * canvas.height }),
+      });
+      return { ...r, regens, pageUploads: pages(), quality: view.quality, ...(view.stats?.() ?? {}) };
+    },
+  };
+  console.log("[bench] ready");
+}
 
 // ---------------------------------------------------------------------------- dev / authoring
 function setupDev() {

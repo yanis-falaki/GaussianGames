@@ -1,11 +1,10 @@
 // Undeveloped's render pipeline: the capture in its original daylight, with Spark's shader
-// patched for the haze at the edge of the world, and render(), which regenerates the splat
-// buffer only when the camera moves (as in residue/view.js).
+// patched for the haze at the edge of the world, the adaptive quality governor, and render(),
+// which regenerates the splat buffer only when needed (as in residue/view.js).
 import * as THREE from "three";
-import { SparkRenderer } from "@sparkjsdev/spark";
 import { RENDER } from "../shared/render-config.js";
 import { chooseQuality, QUALITY } from "../shared/quality.js";
-import { createRenderer, createScanMesh } from "../shared/splat-scene.js";
+import { createRenderer, createScanMesh, createSpark, createGovernor, lodAnchor, driveLod, gpuSlowdown } from "../shared/splat-scene.js";
 import { HAZE_COLOR } from "./haze.js";
 
 // Patch Spark's vertex shader: opacity-aware splat extent (quad ends where the splat's falloff
@@ -97,48 +96,49 @@ export function createView({ container, params, onProgress }) {
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 80);
   scene.add(camera);
 
-  const spark = new SparkRenderer({
-    renderer,
-    maxStdDev: RENDER.maxStdDev,
-    focalAdjustment: Number(params.get("focal")) || RENDER.focalAdjustment,
-    autoUpdate: false,
-    lodSplatScale: Q.lodSplatScale || 1.0,
-  });
+  const spark = createSpark(renderer, params, Q);
   installExtent(spark, params.has("alphacut") ? Number(params.get("alphacut")) : RENDER.alphaCut, {
     color: HAZE_COLOR, fog: new THREE.Vector3(9, 30, 0.55),
   });
-  spark.lodQuatOverride = new THREE.Quaternion();
   scene.add(spark);
 
   const mesh = createScanMesh({ params, tier: Q, onProgress });
+  mesh.maxSh = Q.maxSh;
   scene.add(mesh);
 
+  // resolution and splat budget follow the measured frame cost (governor.js)
+  const governor = createGovernor({ renderer, spark, quality, tier: Q, params });
+  const slow = gpuSlowdown(params);
   addEventListener("resize", () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    governor.resize();
   });
 
   // regenerate the splat buffer only when needed (rotation is free: radial sort + SH depend
-  // only on position)
-  const regen = { pos: new THREE.Vector3(1e9, 0, 0), mapping: -1, frames: 0, warm: 60, force: 0 };
+  // only on position); in between, driveLod keeps the LoD system and streaming going
+  const regen = { pos: new THREE.Vector3(1e9, 0, 0), quat: new THREE.Quaternion(), mapping: -1, warm: 60, force: 0 };
   function needsRegen() {
     if (!mesh.isInitialized) return true;
     if (regen.warm > 0) return regen.warm--, true;
     if (regen.force > 0) return regen.force--, true;
     if (mesh.mappingVersion !== regen.mapping) return true;
     if (camera.position.distanceToSquared(regen.pos) > RENDER.regenStep ** 2) return true;
-    return ++regen.frames > 30;
+    return !spark.lodQuatOverride && Math.abs(camera.quaternion.dot(regen.quat)) < 0.995; // foveated LoD
   }
   function render() {
+    governor.begin();
     camera.updateMatrixWorld();
-    if (needsRegen()) {
+    lodAnchor(spark, camera);
+    const regenerate = needsRegen();
+    if (regenerate) {
       regen.pos.copy(camera.position);
+      regen.quat.copy(camera.quaternion);
       regen.mapping = mesh.mappingVersion;
-      regen.frames = 0;
       spark.update({ scene, camera });
-    }
-    renderer.render(scene, camera);
+    } else driveLod(spark, scene, camera, mesh);
+    for (let i = 0; i < slow; i++) renderer.render(scene, camera); // (?gpux: more than once)
+    governor.end(regenerate);
   }
   const touch = (frames = 2) => (regen.force = Math.max(regen.force, frames));
 
@@ -150,5 +150,5 @@ export function createView({ container, params, onProgress }) {
     const u = spark.material.uniforms;
     u.cfEdgeTex.value = f.tex; u.cfEdgeOrigin.value.copy(f.origin); u.cfEdgeSize.value.copy(f.size); u.cfEdgeOn.value = 1;
   };
-  return { renderer, scene, camera, spark, mesh, quality, render, touch, setEdgeField, setBoundaries };
+  return { renderer, scene, camera, spark, mesh, quality, governor, render, touch, setEdgeField, setBoundaries, stats: () => governor.stats() };
 }

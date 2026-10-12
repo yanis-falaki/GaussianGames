@@ -50,7 +50,7 @@ async function load() {
 
   sanatorium = createScanMesh({
     params, tier,
-    extSplats: (!tier.paged && params.has("ext")) || undefined, // developer switch: 32-byte high-precision splat encoding
+    extSplats: params.has("ext") || undefined, // developer switch: 32-byte high-precision splat encoding
     onProgress: (e) => {
       if (e.total) $("progress").textContent = `loading scan  ${Math.round((100 * e.loaded) / e.total)}%`;
     },
@@ -71,12 +71,13 @@ async function load() {
   // Hold the door until Spark has settled and frames are coming quickly again.
   $("progress").textContent = "developing the scan";
   await waitForSteadyFrames(45, 45000);
+  view.governor.activate(); // from here resolution and detail follow the frame rate
   $("progress").textContent = "";
   $("start").disabled = false;
   $("start").textContent = "Enter";
   if (params.has("bench")) {
     const { installBenchApi } = await import("./bench.js");
-    installBenchApi({ state, renderer, spark, camera, mesh: sanatorium, player, fx, entity, renderFrame });
+    installBenchApi({ state, renderer, spark, camera, mesh: sanatorium, player, fx, entity, renderFrame, quality, stats: view.stats, governor: view.governor });
   }
 }
 
@@ -506,7 +507,6 @@ const renderFrame = () => view.renderFrame(sanatorium, fx, entity);
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const rawDt = clock.getDelta();
-  view.adapt(rawDt, state.started && !state.paused);
   const dt = Math.min(rawDt, 0.05);
   if (state.benching) return; // the benchmark drives rendering itself
   if (state.frozen) return; // freeze frame: the canvas keeps showing the last rendered frame

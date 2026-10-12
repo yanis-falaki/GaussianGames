@@ -282,10 +282,13 @@ export function installShading(spark) {
         clipCenter = projectionMatrix * vec4(viewCenter, 1.0);
       }
       rgba.rgb = rsShade(rsWorld, rgba.rgb);
-      // past the edge: a black fog that only shows where the lamp falls on it
-      vec3 rsFog = rsLight(rsWorld, vec3(0.35)) * vec3(0.42, 0.44, 0.48);
-      float rsPulse = 0.5 + 0.5 * sin(rsTime * 1.6 - length(viewCenter) * 0.7);
-      rgba.rgb = mix(rgba.rgb, rsFog * (0.8 + 0.4 * rsPulse * rsNear), rsE);
+      // past the edge: a black fog that only shows where the lamp falls on it (only evaluated
+      // there: most splats are inside, and the lamp is the costliest part of the shading)
+      if (rsE > 0.0) {
+        vec3 rsFog = rsLight(rsWorld, vec3(0.35)) * vec3(0.42, 0.44, 0.48);
+        float rsPulse = 0.5 + 0.5 * sin(rsTime * 1.6 - length(viewCenter) * 0.7);
+        rgba.rgb = mix(rgba.rgb, rsFog * (0.8 + 0.4 * rsPulse * rsNear), rsE);
+      }
       rgba.a *= (1.0 - 0.45 * rsE) * rsExA;
       // huge splats right in front of the camera (poorly captured spots) melt into the dark
       float rsAng = max(max(scales.x, scales.y), scales.z) / max(length(viewCenter), 0.05);

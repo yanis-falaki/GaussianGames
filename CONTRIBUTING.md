@@ -33,9 +33,10 @@ The heavy outputs (`sanatorium.spz`, the `.rad` LoD files, `lite/`, `vox.bin`) a
 These are URL parameters, never shown in the menus:
 
 - `?debug`: exposes the game on `window` (`game`, `tp()`, `go()` in RESIDUE; `dev` in Undeveloped) and turns on `P` for a freeze frame (and `G` for a visible entity in RESIDUE).
-- `?bench`: RESIDUE's benchmark API (`window.bench`, `src/residue/bench.js`).
-- `?full` / `?lite`: force a quality tier. `?lod` loads the budgeted LoD tree. `?scene=<url>` loads another scene file.
-- `?detail=`, `?alphacut=`, `?focal=`: override the splat budget, the alpha cut and Spark's focal adjustment. `?ext` uses the 32-byte splat encoding (RESIDUE).
+- `?bench`: the benchmark API (`window.bench`): `walk()` in both games (`src/shared/walk-bench.js`), plus RESIDUE's render-settings tools (`src/residue/bench.js`).
+- `?full` / `?lite`: force a quality tier. `?spz` draws every original splat with no LoD (the old full mode), `?lod` the single-file LoD tree, `?scene=<url>` another scene file.
+- `?detail=`, `?res=`, `?alphacut=`, `?focal=`: fix the splat budget or the render scale, override the alpha cut or Spark's focal adjustment. `?fixed` turns adaptive quality off. `?pages=` sets Spark's GPU page pool for streamed chunks. `?ext` uses the 32-byte splat encoding (RESIDUE).
+- `?gpux=6`: draws the scene 6 times a frame, a stand-in for a GPU 6 times slower.
 - `?clean`: start RESIDUE without the camcorder filter.
 
 ## Tools
@@ -43,10 +44,11 @@ These are URL parameters, never shown in the menus:
 | Script | What it does |
 | --- | --- |
 | `tools/bench/server.sh` | isolated Vite server for headless runs (port 5182, or `PORT=5183`), no HMR |
+| `tools/bench/walk.mjs` | frame pacing of either game on a fixed walk through the building (`--params lite`, `--size`, `--dpr`, `--cpu` throttling, `--cfgs`) |
 | `tools/bench/fitness.mjs` | scores the current render settings: frame time, plus SSIM against reference captures (`--make-ref`) |
 | `tools/bench/search.mjs` | evolutionary search over render settings with the same scoring |
 | `tools/bench/shots.mjs` | screenshots RESIDUE's fixed benchmark views under given configs |
 | `tools/author.mjs` | Undeveloped authoring: screenshot poses with a grid, turn picked pixels into 3D clue positions |
 | `tools/deploy.sh` | the deploy above |
 
-Headless runs load the full 225 MB scan. Run one at a time, under `flock /tmp/residue-gpu.lock` (`fitness.mjs` takes the lock itself). The scripts abort if RAM or GPU memory runs low.
+Run headless benchmarks one at a time, at low priority (`nice -n 19 ionice -c3`), under `flock /tmp/residue-gpu.lock` (`fitness.mjs` takes the lock itself). The scripts abort if RAM or GPU memory runs low.

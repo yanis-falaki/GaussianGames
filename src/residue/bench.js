@@ -5,6 +5,7 @@
 // fullscreen play. Loaded only with ?bench (see main.js).
 import * as THREE from "three";
 import { U } from "./lighting.js";
+import { walk, countPageUploads } from "../shared/walk-bench.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -15,6 +16,8 @@ export function installBenchApi(ctx) {
   for (const id of ["title", "hud", "rec", "dot", "grain", "vignette", "fscorner", "pause"]) $(id).style.display = "none";
   entity.active = false;
   const cctx = { renderer, spark, camera, mesh };
+  // perf / capture / show: fixed configs, timed by the benchmark itself
+  const fixed = () => { if (ctx.governor) { ctx.governor.enabled = false; ctx.governor.timing = false; } };
   const pose = (x, y, z, yaw, pitch = -0.1) => {
     player.pos.set(x, y, z);
     player.targetY = y;
@@ -24,11 +27,32 @@ export function installBenchApi(ctx) {
     fx.update({ time: 10, camera, lampOn: 1, dt: 0 }); // fixed time: deterministic frames
   };
   window.__benchRender = ctx.renderFrame;
+  let regens = 0;
+  const update = spark.update.bind(spark);
+  spark.update = (a) => (regens++, update(a));
   window.bench = {
-    apply: (cfg) => applyConfig(cctx, cfg),
-    perf: (cfg, seconds = 10) => runBench({ ...cctx, configs: [cfg], seconds, onFrame: (x, y, z, yaw) => pose(x, y, z, yaw) }),
+    // frame pacing on the walk through the building, as the game renders it (cfg: optional
+    // render settings to apply first, as for perf)
+    async walk({ cfg, seconds = 20, warmup = 3 } = {}) {
+      if (cfg) {
+        if (ctx.governor) ctx.governor.enabled = false; // a fixed config: no adapting
+        applyConfig(cctx, cfg);
+        ctx.governor?.onResize?.();
+      }
+      U.unlit.value = cfg?.unlit ? 1 : 0; // unlit: no relighting (to measure what it costs)
+      regens = 0;
+      const pages = countPageUploads(spark);
+      const r = await walk({
+        renderer, seconds, warmup, regens: () => regens, governor: ctx.governor, frame: window.__benchRender, pose: (x, y, z, yaw) => pose(x, y, z, yaw),
+        probe: () => ({ splats: spark.activeSplats, pixels: renderer.domElement.width * renderer.domElement.height }),
+      });
+      return { ...r, regens, pageUploads: pages(), quality: ctx.quality, ...(ctx.stats?.() ?? {}) };
+    },
+    apply: (cfg) => (fixed(), applyConfig(cctx, cfg)),
+    perf: (cfg, seconds = 10) => fixed() ?? runBench({ ...cctx, configs: [cfg], seconds, onFrame: (x, y, z, yaw) => pose(x, y, z, yaw) }),
     // capture the fixed views; unlit = raw captured colour (judges detail), lit = the game look
     capture: async (cfg, settleMs, unlit = true, indices = null) => {
+      fixed();
       applyConfig(cctx, cfg);
       U.unlit.value = unlit ? 1 : 0;
       const shots = await captureViews({ renderer, settleMs, indices, place: (v) => pose(...v) });
@@ -39,6 +63,7 @@ export function installBenchApi(ctx) {
     views: VIEWS,
     // render one view in the game's lighting (lamp on) and keep it on screen for a screenshot
     async show(cfg, i, settleMs = 5000, unlit = false) {
+      fixed();
       applyConfig(cctx, cfg);
       U.unlit.value = unlit ? 1 : 0;
       pose(...(Array.isArray(i) ? i : VIEWS[i]));
@@ -179,6 +204,7 @@ function fmt(rows) {
 
 function applyConfig({ renderer, spark, camera, mesh }, cfg) {
   const pr = cfg.pixelScale ?? 1;
+  renderer.setPixelRatio(1);
   renderer.setSize(Math.round(1920 * pr), Math.round(1080 * pr), false);
   renderer.domElement.style.width = "100vw";
   renderer.domElement.style.height = "100vh";

@@ -24,7 +24,7 @@ Open the printed URL in Chrome, Edge, Firefox or Safari. Wear headphones for RES
 
 **The scan is not in this repository.** Download *URBEX: Sanatorium Inside – Part01* by Christoph Schindelar from [superspl.at](https://superspl.at/scene/8429e5e2) (CC BY-NC 4.0). `npm run assets` turns the zip into what the games load:
 - a cropped, cleaned SPZ of every splat (~215 MB);
-- a level-of-detail tree for weaker GPUs;
+- a chunked level-of-detail tree that both games stream;
 - a 10 cm collision voxel grid.
 
 It needs Python 3, Rust/cargo (to build Spark's `build-lod`) and about 10 GB of scratch disk.
@@ -54,8 +54,8 @@ npm run deploy
 
 Extras:
 - `H` turns the camcorder filter on and off (remembered); `?clean` starts without it.
-- `?lite` / `?full` force the lighter streamed scene or the full one (normally chosen for your GPU).
-- `?detail=1.2` fixes the splat budget instead of adapting it to your frame rate.
+- `?lite` / `?full` force the smaller or the larger splat budget (normally chosen for your GPU).
+- `?detail=1.2` fixes the splat budget and `?res=0.8` the render scale, instead of adapting them to your frame rate.
 - `?debug` (both games) exposes the game state on `window` and turns on `P` for a freeze frame.
 
 ### Undeveloped
@@ -102,17 +102,18 @@ Everything is derived from the capture itself. There are no meshes and no hand-m
 
 ## Performance
 
-Each game picks a version of the scan for the machine it's running on (`src/shared/quality.js`):
-- **Full:** dedicated GPUs get every splat with full colour detail (225 MB).
-- **Lite:** integrated GPUs (Apple silicon, Intel, phones) get a chunked level-of-detail tree with degree-1 colour. Spark streams it, drawing about 1.25M splats, and only the chunks needed are downloaded.
-- **Fallback:** if the full scan turns out to be a slideshow while loading, the game switches to the lite one and remembers that.
-- **Choosing:** the title screens have a **Graphics: quality / performance** button that switches between them and is remembered. `?full` or `?lite` also force either version.
+Both games stream the scan the way World Labs' own viewer does (Spark's paged level of detail):
+- **Streamed level of detail:** a tree of every original splat plus merged parents, in chunks of 64K splats (`public/assets/lite/`). Spark fetches the chunks it needs and draws a budget of splats chosen by on-screen size, so the room you're in keeps full detail and distant rooms cost little.
+- **Foveated detail:** as in World Labs' Marble viewer, full detail in a 100° cone, fading to 0.4 at 140° and 0.2 behind you.
+- **Two budgets** (`src/shared/quality.js`): about 5M splats on dedicated GPUs (**quality**), 1.25M on integrated GPUs and phones (**performance**). The title screens' **Graphics** button switches between them, and `?full` / `?lite` force either.
+- **Adaptive quality** (`src/shared/governor.js`): resolution, then the splat budget, step down when frames are missed and back up when there is headroom (measured with a GPU timer where the browser has one). The level is remembered per browser. The canvas never renders above CSS resolution, so high-DPI screens don't pay 4× the pixels.
+- **Shading in the vertex shader, on-demand regeneration:** lighting changes and turning your head never regenerate the splat buffer; moving does, every 25 cm, and Spark keeps streaming in between.
 
-RESIDUE draws all 12.5M splats without LoD. On an RTX 2070 at 1080p it runs at about 55-60 fps. The render settings in `src/shared/render-config.js` were tuned with a headless benchmark:
-- `tools/bench/fitness.mjs` scores frame time and image quality against a high-budget reference;
-- `tools/bench/search.mjs` runs an evolutionary search over the settings.
+On an RTX 2070 at 1080p, walking through the building, both games hold 60 fps with a p99 frame time of 16.8 ms. A GPU six times slower (simulated with `?gpux=6`) still holds 60 fps on the performance scene, at a lower resolution.
 
-Both need `tools/bench/server.sh start`.
+Benchmarks (all need `tools/bench/server.sh start`):
+- `tools/bench/walk.mjs` measures frame pacing on a fixed walk through the building, for either game (fps, p95/p99, hitches, GPU time, splats and pixels drawn).
+- `tools/bench/fitness.mjs` scores frame time and image quality against reference captures; `tools/bench/search.mjs` runs an evolutionary search over the settings.
 
 ## How the code is organised
 

@@ -1,8 +1,8 @@
-// Render settings shared by both games, tuned with the benchmark/search loop (tools/bench/) at
-// 1920x1080 on an RTX 2070 for the best image quality within a ~12.5ms GPU frame budget.
-// Colour detail (SH degree) and the splat budget per quality tier are in quality.js.
+// Render settings shared by both games, tuned with the benchmarks in tools/bench/ at 1920x1080 on
+// an RTX 2070. Colour detail (SH degree), the splat budget and foveation per quality tier are in
+// quality.js; resolution and budget then adapt at runtime (governor.js).
 export const RENDER = {
-  // the benchmark's candidate defaults (tools/bench/fitness.mjs); the games take these from quality.js
+  // the benchmark's candidate defaults (tools/bench/fitness.mjs)
   lodSplatScale: 2.0,
   maxSh: 1,
   foveate: false,
@@ -22,12 +22,11 @@ export const RENDER = {
   // 2.0 matches PlayCanvas/SuperSplat: less anti-alias blur per splat. Measured +60% edge detail
   // on the kitchen with no visible aliasing.
   focalAdjustment: 2.0,
-  // Every original splat (12.5M, no LoD), like SuperSplat draws it. The LoD tree's merged splats were
-  // visibly blurrier; with on-demand regeneration the full set holds ~51-53fps at 1080p on an RTX 2070.
-  // (a hosted build serves it from elsewhere: VITE_SCAN_URL, see tools/deploy.sh)
-  scene: import.meta.env?.VITE_SCAN_URL || "assets/sanatorium.spz",
-  lodScene: "assets/sanatorium-lod.rad", // ?lod : budgeted level-of-detail fallback for weaker GPUs
-  // the lite scene for integrated GPUs (quality.js): a chunked level-of-detail tree with degree-1
-  // colour, streamed chunk by chunk (tools/assets/build.sh)
+  // The streamed level-of-detail tree both tiers draw (tools/assets/build.sh): every original
+  // splat plus merged parents, degree-1 colour, in chunks of 64K splats that Spark fetches as needed.
   liteScene: "assets/lite/sanatorium-lite-lod.rad",
+  // ?spz: every original splat (12.5M) in one file, drawn without LoD (the old full mode)
+  // (a hosted build serves it from elsewhere: VITE_SCAN_URL, see tools/deploy.sh)
+  allSplats: import.meta.env?.VITE_SCAN_URL || "assets/sanatorium.spz",
+  lodScene: "assets/sanatorium-lod.rad", // ?lod : the single-file LoD tree, loaded whole
 };
