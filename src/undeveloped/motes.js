@@ -7,10 +7,9 @@ import * as THREE from "three";
 const PER_CLUE = 70;
 
 export class Motes {
-  // clues: [{ id, v, r }]. per: motes per clue; strength: where they start (0 hidden .. 1)
-  constructor(scene, clues, { per = PER_CLUE, strength = 1 } = {}) {
+  // clues: [{ id, v, r }]
+  constructor(scene, clues) {
     this.clues = clues;
-    const PER_CLUE = per;
     const n = clues.length * PER_CLUE;
     const base = new Float32Array(n * 3), seed = new Float32Array(n * 4), clueIdx = new Float32Array(n);
     clues.forEach((c, ci) => {
@@ -31,8 +30,8 @@ export class Motes {
     geo.setAttribute("position", new THREE.BufferAttribute(base, 3));
     geo.setAttribute("seed", new THREE.BufferAttribute(seed, 4));
     geo.setAttribute("clue", new THREE.BufferAttribute(clueIdx, 1));
-    this.strength = new Float32Array(clues.length).fill(strength);
-    this.tex = new THREE.DataTexture(new Uint8Array(clues.length * 4).fill(Math.round(strength * 255)), clues.length, 1, THREE.RGBAFormat);
+    this.strength = new Float32Array(clues.length).fill(1);
+    this.tex = new THREE.DataTexture(new Uint8Array(clues.length * 4).fill(255), clues.length, 1, THREE.RGBAFormat);
     this.tex.needsUpdate = true;
     this.mat = new THREE.ShaderMaterial({
       transparent: false, depthTest: true, depthWrite: true,
@@ -80,15 +79,13 @@ export class Motes {
     this.points.frustumCulled = false;
     this.points.renderOrder = -10; // before the splats, so they cover the motes where solid
     scene.add(this.points);
-    this.target = new Float32Array(clues.length).fill(strength);
+    this.target = new Float32Array(clues.length).fill(1);
   }
 
   // settle the dust over a clue that has been documented
-  settle(id) { this.set(id, 0); }
-
-  // fade the motes of every entry whose id is `id` (or matches it, for a function) toward v
-  set(id, v) {
-    this.clues.forEach((c, i) => { if (typeof id === "function" ? id(c) : c.id === id) this.target[i] = v; });
+  settle(id) {
+    const i = this.clues.findIndex((c) => c.id === id);
+    if (i >= 0) this.target[i] = 0;
   }
 
   update(dt, time, pixelHeight) {
@@ -97,9 +94,7 @@ export class Motes {
     let dirty = false;
     for (let i = 0; i < this.strength.length; i++) {
       if (this.strength[i] === this.target[i]) continue;
-      this.strength[i] = this.target[i] < this.strength[i]
-        ? Math.max(this.target[i], this.strength[i] - dt * 0.5)
-        : Math.min(this.target[i], this.strength[i] + dt * 0.8);
+      this.strength[i] = Math.max(this.target[i], this.strength[i] - dt * 0.5);
       this.tex.image.data[i * 4] = Math.round(this.strength[i] * 255);
       dirty = true;
     }

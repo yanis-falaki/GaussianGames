@@ -521,6 +521,7 @@ function lostCue() {
 }
 
 // ---------------------------------------------------------------------------- frame
+const corner = new THREE.Vector3();
 // the bracket around a clue: its glow region projected to a W x H view (left, top, width,
 // height in that view's pixels, at least `min` on a side, kept inside the frame)
 function bracketBox(clue, W, H, min) {
@@ -536,16 +537,13 @@ function bracketBox(clue, W, H, min) {
   return { L: (L + R) / 2 - w / 2, T: (T + B) / 2 - h / 2, w, h };
 }
 
-// camera raised: what's in frame, close enough to count. The subject's contour glows faintly
-// (updateHighlights) and a bracket closes around it on screen
-const corner = new THREE.Vector3();
+// camera raised: what's in frame, close enough to count. A bracket closes around the subject on
+// screen (its splats light up only once it's photographed: updateHighlights)
 function updateViewfinder() {
-  state.aimed = null;
   if (!state.raised) return;
   const f = framed(0.6);
   const fresh = f.filter((x) => !state.evidence.get(x.clue.id)?.img);
   const subject = (fresh[0] ?? f[0])?.clue ?? null;
-  state.aimed = subject;
   $("vf-focus").textContent = fresh.length ? "something worth a photo" : f.length ? "already in your notebook" : "no subject";
   $("viewfinder").classList.toggle("hot", fresh.length > 0);
   const br = $("vf-target");

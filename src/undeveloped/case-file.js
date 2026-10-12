@@ -13,19 +13,19 @@ export const TRAILS = [
   // miss the stairwell without it). `tail`: only the last metres of the route are marked
   { id: "stairs", always: true, walker: "mara", from: [10.6, -1.5, 9.3], to: [-1.0, 2.25, 18.0], tail: 15, lane: -0.15 },
   // I. Getting in: from the window she climbed through, along her tags, to the kitchen
-  { id: "in", chapter: 0, walker: "mara", from: "frame", to: "heart_pink_small" },
-  { id: "kitchen", chapter: 0, walker: "mara", from: "heart_pink_small", to: "heart_kitchen", done: ["heart_kitchen", "kettles"] },
+  { id: "in", walker: "mara", from: "frame", to: "heart_pink_small" },
+  { id: "kitchen", walker: "mara", from: "heart_pink_small", to: "heart_kitchen", done: ["heart_kitchen", "kettles"] },
   // II. Not alone: her way back to the hall, his boots to where he waited, the dog's paws
-  { id: "back", chapter: 1, walker: "mara", from: "kettles", to: "heart_traced" },
-  { id: "him", chapter: 1, walker: "man", from: "heart_traced", to: "armchairs" },
-  { id: "dog", chapter: 1, walker: "dog", from: "armchairs", to: "bowl", done: ["bowl", "barrel", "notice"] },
-  { id: "dogchair", chapter: 1, walker: "dog", from: "bowl", to: "terrace_chair" }, // (optional) his owner's chair
+  { id: "back", walker: "mara", from: "kettles", to: "heart_traced" },
+  { id: "him", walker: "man", from: "heart_traced", to: "armchairs" },
+  { id: "dog", walker: "dog", from: "armchairs", to: "bowl", done: ["bowl", "barrel", "notice"] },
+  { id: "dogchair", walker: "dog", from: "bowl", to: "terrace_chair" }, // (optional) his owner's chair
   // III. Where is Mara: what he dropped, her run, her hiding place, and where she went next
-  { id: "page", chapter: 2, walker: "man", from: "armchairs", to: "page" },
-  { id: "run", chapter: 2, walker: "run", from: "heart_traced", to: "flipped" },
-  { id: "up", chapter: 2, walker: "run", from: "flipped", to: "drawer", done: ["drawer", "room31_note"], lane: 0.16 },
-  { id: "hide", chapter: 2, walker: "mara", from: "drawer", to: "wardrobe" }, // (optional) where she hid
-  { id: "out", chapter: 2, walker: "mara", from: "drawer", to: "notice", lane: 0 },
+  { id: "page", walker: "man", from: "armchairs", to: "page" },
+  { id: "run", walker: "run", from: "heart_traced", to: "flipped" },
+  { id: "up", walker: "run", from: "flipped", to: "drawer", done: ["drawer", "room31_note"], lane: 0.16 },
+  { id: "hide", walker: "mara", from: "drawer", to: "wardrobe" }, // (optional) where she hid
+  { id: "out", walker: "mara", from: "drawer", to: "notice", lane: 0 },
 ];
 
 // doorway from the dining hall to the terrace (opened in the collision grid only; see main.js)

@@ -60,6 +60,7 @@ export class Governor {
     this.samples = [];   // GPU ms (or frame intervals without a GPU timer) in the current window
     this.intervals = [];
     this.goodWindows = 0;
+    this.overWindows = 0; // consecutive windows over budget
     this.lastEnd = 0;
     this.active = false; // decisions start with activate(), once the scan has loaded and settled
     this.streamedAt = 0; // when Spark last had chunks in flight (their uploads can stall a frame)
@@ -185,7 +186,7 @@ export class Governor {
     const severe = over && missed > 0.3 && (!timed || gpuP75 > TARGET_MS);
     const calm = missed < 0.02;
     const headroom = calm && timed && gpuP90 < TARGET_MS * 0.5;
-    this.overWindows = over ? (this.overWindows ?? 0) + 1 : 0;
+    this.overWindows = over ? this.overWindows + 1 : 0;
     this.goodWindows = calm && (headroom || !timed) ? this.goodWindows + 1 : 0;
     if (now - this.lastChange < HOLD_MS) return;
     if (this.overWindows >= 2 || severe) {

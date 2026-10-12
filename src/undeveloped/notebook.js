@@ -1,6 +1,7 @@
 // Undeveloped's case notebook (Tab): each chapter as a question, a line of the story so far, and
 // statements with blanks, filled with evidence and keywords and checked chapter by chapter; the
-// evidence grid with your photos and documents; and the ending once the last chapter holds.
+// evidence grid with your photos and documents. Once the last chapter holds it hands over to the
+// ending (main.js showEnding).
 // A wrong check marks which statements hold and nudges on the ones that don't, without giving the
 // answer away; after a few failed checks it names the clue that matters. Content: case-file.js.
 import * as CASE from "./case-file.js";

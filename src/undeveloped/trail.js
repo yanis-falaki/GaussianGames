@@ -7,8 +7,9 @@
 // Every leg is on show from the start of the game: when play begins their prints appear one after
 // another from each leg's start, as if being walked. Once what a leg leads to has been documented
 // it fades to a faint trace. Legs that share a corridor walk in lanes (`lane`: metres to the
-// walker's right), so there-and-back trails and the stairs stay readable. Prints close to you catch the light a little, and pulse() brightens the open legs for
-// a few seconds (the lost-player cue in main.js). Opacity, the reveal and the glow live in a
+// walker's right), so there-and-back trails and the stairs stay readable. Prints close to you
+// catch the light a little, and pulse() brightens the open legs for a few seconds (the
+// lost-player cue in main.js). Opacity, the reveal and the glow live in a
 // small dyno modifier per leg (generation pass): changing them only needs a regeneration while
 // something animates, throttled to ~10 Hz; walking regenerates anyway.
 import * as THREE from "three";
@@ -16,7 +17,7 @@ import { SplatMesh, dyno } from "@sparkjsdev/spark";
 
 // how each walker leaves prints. stride: metres between successive prints; gait: half the
 // distance between the feet; wander: sideways drift (m) a dog's path takes
-export const WALKERS = {
+const WALKERS = {
   mara: { stride: 0.36, gait: 0.085 },
   run: { stride: 0.62, gait: 0.075 },  // Mara running: longer steps, toes dug in, scuffed
   man: { stride: 0.5, gait: 0.12 },    // heavy boots, a man's size
@@ -66,7 +67,7 @@ function trim(pts, d, fromEnd) {
 // the walking route between two points on the nav graph, a little short of both ends (prints
 // stop before the object instead of running under it)
 // tail: keep only the last `tail` metres of the walk
-export function legRoute(world, from, to, { start = 0.5, end = 0.7, tail = 0 } = {}) {
+function legRoute(world, from, to, { start = 0.5, end = 0.7, tail = 0 } = {}) {
   const path = world.navAstar(world.nearestNode(from), world.nearestNode(to));
   if (!path) return null;
   let pts = world.navSmooth(path, 40, Infinity).map((n) => new THREE.Vector3(n.x, n.y, n.z));
@@ -110,7 +111,7 @@ function stamp(kind, c, ang, left, fresh, R, out) {
 
 // the prints along a route. Returns splats [x, y, z, size, opacity] in walking order and the
 // print centres
-export function layPrints(world, route, walkerKind, seed = 31, lane = 0.1) {
+function layPrints(world, route, walkerKind, seed = 31, lane = 0.1) {
   const W = WALKERS[walkerKind];
   let s = seed;
   const R = () => ((s = (s * 16807) % 2147483647) / 2147483647);
@@ -189,7 +190,7 @@ export class Trails {
       mesh.visible = false;
       scene.add(mesh);
       this.legs.push({
-        def, mesh, route, prints, count: splats.length, length: polyLength(route), uOpacity, uReveal,
+        def, mesh, prints, count: splats.length, length: polyLength(route), uOpacity, uReveal,
         state: "hidden", opacity: 0, target: 0, reveal: 0, revealT: 0,
       });
     });
@@ -203,10 +204,10 @@ export class Trails {
 
   get(id) { return this.legs.find((l) => l.def.id === id); }
 
-  // "hidden" | "active" (a lead) | "always" (shown all game) | "faded" (followed, or a closed chapter)
+  // "hidden" | "active" (a lead) | "always" (shown all game) | "faded" (followed)
   set(id, state) {
     const leg = this.get(id);
-    if (!leg || leg.state === state) return false;
+    if (!leg || leg.state === state) return;
     const was = leg.state;
     leg.state = state;
     leg.target = state === "active" ? 1 : state === "always" ? ALWAYS : state === "faded" ? FADED : 0;
@@ -216,7 +217,6 @@ export class Trails {
       leg.revealDur = Math.min(REVEAL_MAX, Math.max(1, leg.length / REVEAL_MPS));
       if (state === "faded") leg.opacity = FADED, leg.revealT = leg.revealDur; // no show for an old lead
     }
-    return true;
   }
 
   // print centres of the legs on show (leads and the always-on ones)
