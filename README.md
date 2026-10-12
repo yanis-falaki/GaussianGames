@@ -76,56 +76,71 @@ Extras:
 
 Everything is derived from the capture itself. There are no meshes and no hand-made collision.
 
-- **Relighting** (`src/lighting.js`): RESIDUE patches Spark's splat vertex shader. Each splat's baked colour is treated as albedo and relit per frame:
+- **Relighting** (`src/residue/lighting.js`): RESIDUE patches Spark's splat vertex shader. Each splat's baked colour is treated as albedo and relit per frame:
   - by a hand lamp (core, ring and spill, which dims and goes orange as it runs down);
   - by a cold moonlight that survives only in the brightest splats (the windows);
   - by a failing bulb in the stairwell, occluded by a line-of-sight volume baked from the voxel grid.
 
   Shading in the vertex shader means turning your head never regenerates the splat buffer.
-- **Collision and navigation** (`tools/voxelize.py`, `src/world.js`): splats are binned into an opacity-weighted 10 cm voxel grid. Floors are solid cells with free headroom above them. From the same grid come the player's walkable surfaces (stairs included), a nav graph with clearance-aware A* for the entity, and the line-of-sight tests.
+- **Collision and navigation** (`tools/assets/voxelize.py`, `src/shared/world.js`): splats are binned into an opacity-weighted 10 cm voxel grid. Floors are solid cells with free headroom above them. From the same grid come the player's walkable surfaces (stairs included), a nav graph with clearance-aware A* for the entity, and the line-of-sight tests.
 - **The plates:** patches of the real floor are shown as a glowing photographic negative. Under the lamp they develop into a warm positive with a smeared figure in it.
-- **Mara's footprints** (`src/case/trail.js`): in Undeveloped, splat shoe prints in pale dust are laid along a nav route to the stairwell, on the real floor and steps.
-- **The edge of the world** (`src/case/boundary.js`): where the capture runs out, splats ripple and dissolve, into black fog at night and into overexposed haze by day, driven by a distance field baked from the nav graph.
-- **The entity** (`src/figure.js`, `src/entity.js`):
+- **Mara's footprints** (`src/undeveloped/trail.js`): in Undeveloped, splat shoe prints in pale dust are laid along a nav route to the stairwell, on the real floor and steps.
+- **The edge of the world** (`src/shared/edge-field.js`): where the capture runs out, splats ripple and dissolve, into black fog at night and into overexposed haze by day, driven by a distance field baked from the nav graph.
+- **The entity** (`src/residue/figure.js`, `src/residue/entity.js`):
   - **Body:** about 16,000 procedural Gaussians with a body-part ID packed into each splat's colour bits, posed on the GPU by a Spark dyno modifier.
   - **Movement:** a broken-legged gait, stalking and hunting body language, and sprint charges, shown in stop-motion.
   - **Face:** a head that smears like a long exposure.
   - **The lamp:** it freezes her and burns her away splat by splat.
-- **The camcorder** (`src/camcorder.js`): a post pass over the splat render adds barrel distortion, colour fringing, auto-gain noise, lagging auto-exposure, autofocus hunting and interference, together with handheld sway on the camera.
+- **The camcorder** (`src/residue/camcorder.js`): a post pass over the splat render adds barrel distortion, colour fringing, auto-gain noise, lagging auto-exposure, autofocus hunting and interference, together with handheld sway on the camera.
 - **Sound:** nearly all of it is procedural WebAudio:
   - HRTF-positioned footsteps;
   - the entity's running steps;
   - a wind-up lamp's ratchet;
   - the bulb's hum;
   - the detuned piano in the dining hall;
-  - Undeveloped's gentle score (`src/case/music.js`): Karplus-Strong harp, pads and bass in slow major-key sections with rests between them.
+  - Undeveloped's gentle score (`src/undeveloped/music.js`): Karplus-Strong harp, pads and bass in slow major-key sections with rests between them.
 
 ## Performance
 
-Each game picks a version of the scan for the machine it's running on (`src/quality.js`):
+Each game picks a version of the scan for the machine it's running on (`src/shared/quality.js`):
 - **Full:** dedicated GPUs get every splat with full colour detail (225 MB).
 - **Lite:** integrated GPUs (Apple silicon, Intel, phones) get a chunked level-of-detail tree with degree-1 colour. Spark streams it, drawing about 1.25M splats, and only the chunks needed are downloaded.
 - **Fallback:** if the full scan turns out to be a slideshow while loading, the game switches to the lite one and remembers that.
 - **Choosing:** the title screens have a **Graphics: quality / performance** button that switches between them and is remembered. `?full` or `?lite` also force either version.
 
-RESIDUE draws all 12.5M splats without LoD. On an RTX 2070 at 1080p it runs at about 55-60 fps. The render settings in `src/render-config.js` were tuned with a headless benchmark:
-- `tools/fitness.mjs` scores frame time and image quality against a high-budget reference;
-- `tools/search.mjs` runs an evolutionary search over the settings.
+RESIDUE draws all 12.5M splats without LoD. On an RTX 2070 at 1080p it runs at about 55-60 fps. The render settings in `src/shared/render-config.js` were tuned with a headless benchmark:
+- `tools/bench/fitness.mjs` scores frame time and image quality against a high-budget reference;
+- `tools/bench/search.mjs` runs an evolutionary search over the settings.
 
-Both need `tools/bench-server.sh start`.
+Both need `tools/bench/server.sh start`.
 
-## Repository layout
+## How the code is organised
 
 ```
-index.html            menu (split screen)
-residue.html          RESIDUE
-undeveloped.html      Undeveloped
-src/                  RESIDUE: main loop, lighting, entity, camcorder, audio, player, world
-src/case/             Undeveloped: game, case content, daylight view, edge of the world
-public/menu/          menu images
-tools/                asset pipeline (Python, Spark build-lod), benchmark and authoring tools
-docs/                 README images
+index.html, residue.html, undeveloped.html   the three pages (menu, and one per game)
+src/shared/       what both games use: Spark setup, render settings, quality tiers,
+                  collision + nav (world.js), player controller, fullscreen, the scan's facts
+src/residue/      RESIDUE      main.js starts it
+src/undeveloped/  Undeveloped  main.js starts it
+src/menu/         the split-screen menu and its sound
+tools/assets/     scan zip -> public/assets (npm run assets)
+tools/bench/      headless benchmark and screenshot tools
+tools/deploy.sh   npm run deploy
+functions/        the Cloudflare Pages Function that streams the scan from R2
 ```
+
+**Where each game starts.** Each page loads one `main.js`. It builds the view, loads the voxel grid (`World`) and the scan (`createScanMesh`), waits for Spark to settle, then enables the start button.
+
+**How a frame runs.**
+1. The game updates its state: player movement, then the game's rules. RESIDUE runs `update()` in `residue/main.js` (lamp, plates, entity, HUD). Undeveloped runs its loop in `undeveloped/main.js` (camera, hints, footprints).
+2. Per-frame values go into Spark's patched vertex shader as uniforms: lamp, plates and edge of the world in `residue/lighting.js`, haze and edge in `undeveloped/view.js`. Shading is done there, so turning your head costs nothing.
+3. `renderFrame()` (`residue/view.js`) or `render()` (`undeveloped/view.js`) asks Spark to regenerate its splat buffer only when needed: the camera has moved a few cm, an effect is animating, or new LoD data has arrived. Then it draws, and in RESIDUE the camcorder post pass runs on top.
+
+**Modules by game.**
+- RESIDUE: `story.js` (text and positions), `hud.js`, `entity.js` + `figure.js` (the entity's AI and procedural body), `lighting.js` (relighting and plate effects), `camcorder.js`, `bulb.js`, `audio.js`, and `bench.js` (loaded only with `?bench`).
+- Undeveloped: `case-file.js` (clues, chapters, texts), `notebook.js`, `view.js`, `haze.js`, `motes.js`, `trail.js`, `audio.js`, `music.js`.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for running, building assets, developer switches and the tools.
 
 ## Credits
 
