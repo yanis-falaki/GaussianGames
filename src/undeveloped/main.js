@@ -265,12 +265,48 @@ function setFrozen(on) {
 bindFullscreenButtons();
 bindQualityButtons(view.quality);
 
-let toastTimer = 0;
-function toast(html, ms = 2600) {
+// Gameplay toasts wait while an overlay is up (the notebook, a document, the opening, a chapter
+// card, the ending): one showing when it opens is put back in the queue, and the queue plays
+// once it closes, dropping anything older than half a minute. The notebook's own messages
+// (force) show over it.
+let toastTimer = 0, toastShown = null, toastQueue = [];
+const overlayOpen = () => !!state.ui || !!state.intro || !$("chapter-card").hidden;
+function toast(html, ms = 2600, { force = false } = {}) {
+  if (!force && overlayOpen()) return queueToast(html, ms);
   $("toast").innerHTML = html;
   $("toast").style.opacity = 1;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => ($("toast").style.opacity = 0), ms);
+  toastTimer = setTimeout(() => { $("toast").style.opacity = 0; toastShown = null; }, ms);
+  toastShown = force ? null : { html, end: performance.now() + ms };
+}
+function queueToast(html, ms) {
+  toastQueue = toastQueue.filter((t) => t.html !== html);
+  toastQueue.push({ html, ms: Math.max(ms, 3000), at: performance.now() });
+  if (toastQueue.length > 3) toastQueue.shift();
+}
+let overlayWas = false;
+function updateToasts() {
+  const open = overlayOpen();
+  if (open && !overlayWas && toastShown) {
+    const left = toastShown.end - performance.now();
+    if (left > 1200) queueToast(toastShown.html, left);
+    clearTimeout(toastTimer);
+    $("toast").style.opacity = 0;
+    toastShown = null;
+  }
+  // pointers to the notebook are moot once it has been opened
+  if (state.ui === "notebook") toastQueue = toastQueue.filter((t) => !/<b>Tab<\/b>/.test(t.html));
+  if (!open && overlayWas) flushToasts(700);
+  overlayWas = open;
+}
+function flushToasts(delay) {
+  setTimeout(() => {
+    toastQueue = toastQueue.filter((t) => performance.now() - t.at < 30000);
+    if (overlayOpen() || !toastQueue.length) return;
+    const t = toastQueue.shift();
+    toast(t.html, t.ms);
+    if (toastQueue.length) flushToasts(t.ms + 400);
+  }, delay);
 }
 
 // ---------------------------------------------------------------------------- looking at things
@@ -405,7 +441,7 @@ function addEvidence(c, img) {
   updateTrails();
 }
 
-const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: (ci) => { progress(); updateHud(); updateTrails(); if (ci + 1 < CASE.CHAPTERS.length) state.pendingCard = ci + 1; }, onFinish: showEnding });
+const notebook = createNotebook({ state, audio, toast: (html, ms) => toast(html, ms, { force: true }), setRaised, onSolved: (ci) => { progress(); updateHud(); updateTrails(); if (ci + 1 < CASE.CHAPTERS.length) state.pendingCard = ci + 1; }, onFinish: showEnding });
 
 // ---------------------------------------------------------------------------- the ending
 // The light washes out, then the case closes: what happened next, paragraph by paragraph, a
@@ -528,7 +564,7 @@ function updateHint(dt) {
   if (hintT > 0) return;
   hintT = 0.15;
   let hint = "";
-  if (!state.raised && !state.ui) {
+  if (!state.raised && !overlayOpen()) {
     const near = framed(0.18).filter((x) => x.dist < Math.min(x.clue.range, 4))[0];
     if (near) hint = near.clue.kind === "doc" ? "E — read" : "E — look closer";
     // the first time you're close to something, say how the camera works
@@ -546,6 +582,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (state.frozen || state.benching) return; // (the benchmark drives rendering itself)
+  updateToasts();
   if (player && state.started && state.intro) {
     updateOpening(dt);
     audio.update(dt, camera);
