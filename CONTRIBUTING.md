@@ -28,6 +28,8 @@ The heavy outputs (`sanatorium.spz`, the `.rad` LoD files, `lite/`, `vox.bin`) a
 
 `npm run deploy` (`tools/deploy.sh`) builds with `VITE_SCAN_URL=scan/sanatorium.spz`, uploads the scan to the R2 bucket only when it has changed, and publishes `dist/` to the `gaussiangames` Cloudflare Pages project. `functions/scan/[name].js` streams the scan from R2. Run `npx wrangler login` once first.
 
+The site's public address, used by the link-preview tags (Open Graph, Twitter cards) in the three pages, is `VITE_SITE_URL` in `.env`.
+
 ## Developer switches
 
 These are URL parameters, never shown in the menus:
