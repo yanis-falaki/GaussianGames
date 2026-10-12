@@ -10,8 +10,9 @@ public/assets/*.rad
 ext/
 notes/
 __pycache__/
-bench/
+/bench/
 public/assets/bench/
 public/assets/lite/
 .wrangler/
 .deploy/
+public/assets/full/

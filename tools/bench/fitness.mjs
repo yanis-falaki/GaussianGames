@@ -7,6 +7,7 @@
 // Needs the bench server: tools/bench/server.sh start  (port 5182, or BENCH_URL=...)
 // Benchmarks hold a machine-wide GPU lock so runs never overlap (timing + GPU memory safety).
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
@@ -35,7 +36,7 @@ const cfg = { name: "candidate", ...RENDER, ...cfgArg };
 
 const browser = await puppeteer.launch({
   headless: "new", protocolTimeout: 0,
-  userDataDir: "/tmp/residue-bench-profile", // persistent HTTP cache: the 850MB scan isn't re-downloaded
+  userDataDir: path.join(os.homedir(), ".cache/gaussian-games-bench"), // HTTP cache of the scan, on disk (/tmp may be RAM)
   args: ["--use-angle=gl-egl", "--ignore-gpu-blocklist", "--no-sandbox", "--window-size=1920,1080",
     "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--js-flags=--max-old-space-size=4096"],
   defaultViewport: { width: 1920, height: 1080 },
