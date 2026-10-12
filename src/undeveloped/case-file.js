@@ -32,7 +32,7 @@ export const TRAILS = [
 // doorway from the dining hall to the terrace (opened in the collision grid only; see main.js)
 export const TERRACE_DOOR = { x: 13.55, y: -1.55, z: 24.3, hx: 0.45, hz: 0.35, h: 2.4 };
 
-// The opening, shown once (localStorage "undeveloped.intro"): three lines over a slow walk
+// The opening, shown each time a case starts (skippable): three lines over a slow walk
 // through the dining hall, ending where you start. path: [x, y (floor), z, yaw, pitch] keys.
 export const OPENING = {
   lines: [

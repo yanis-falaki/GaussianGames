@@ -109,10 +109,7 @@ $("start").onclick = () => {
   state.started = true;
   state.t0 = performance.now();
   lock();
-  let seen = false;
-  try { seen = localStorage.getItem(INTRO_KEY) === "seen"; } catch {}
-  if (seen) return enter();
-  // the first time: the opening, over a slow walk through the hall
+  // the opening, over a slow walk through the hall (every time; easy to skip)
   $("title").classList.add("leaving");
   setTimeout(() => { $("title").hidden = true; $("title").classList.remove("leaving"); }, 1400);
   startOpening();
@@ -132,8 +129,7 @@ function enter() {
 
 // ---------------------------------------------------------------------------- the opening
 // Three lines over a slow camera move through the dining hall, ending where you start. Shown
-// once; click, Space, Enter or Esc skips it.
-const INTRO_KEY = "undeveloped.intro";
+// every time; click, Space, Enter or Esc skips it.
 const opening = { t: 0, line: -1 };
 function startOpening() {
   state.intro = true;
@@ -172,7 +168,6 @@ function updateOpening(dt) {
 function endOpening() {
   if (!state.intro) return;
   state.intro = false;
-  try { localStorage.setItem(INTRO_KEY, "seen"); } catch {}
   player.spawn(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z, CASE.SPAWN.yaw);
   player.enabled = document.pointerLockElement === canvas;
   $("intro").classList.remove("on");
