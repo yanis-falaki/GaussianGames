@@ -43,7 +43,7 @@ The same building is a horror game at night and a detective game by day.
 
 - **Real evidence:** every clue is an actual object in the scan (a window frame on the floor, a pink heart traced over in blue, a dog bowl on the terrace), and the photos in your notebook are the frames you took.
 - **Deduction:** the notebook poses each chapter as a question and statements with blanks, which you fill with evidence and keywords. A chapter is only confirmed when every statement holds; a wrong check marks what holds and nudges on the rest.
-- **Her trail:** footprints in the dust lead from clue to clue in the order of her story, chapter by chapter, and fade once followed.
+- **The trails:** footprints in the dust (hers, a man's boots, a dog's paws) lead to every clue and up the stairwell, and fade once followed.
 
 The title screens' **Graphics** button switches between the quality and performance versions of the scan. Developer switches (`?debug`, `?lite`, `?full`, `?detail=`, `?res=` and more) are listed in [CONTRIBUTING.md](CONTRIBUTING.md#developer-switches).
 
@@ -59,7 +59,7 @@ Everything is derived from the capture itself. There are no meshes and no hand-m
   Shading in the vertex shader means turning your head never regenerates the splat buffer.
 - **Collision and navigation** (`tools/assets/voxelize.py`, `src/shared/world.js`): splats are binned into an opacity-weighted 10 cm voxel grid. Floors are solid cells with free headroom above them. From the same grid come the player's walkable surfaces (stairs included), a nav graph with clearance-aware A* for the entity, and the line-of-sight tests.
 - **The plates:** patches of the real floor are shown as a glowing photographic negative. Under the lamp they develop into a warm positive with a smeared figure in it.
-- **Footprints** (`src/undeveloped/trail.js`): in Undeveloped, the trails left that day (Mara's shoes, walking and then running, a man's boots, a dog's paws) are splat prints in pale dust, laid leg by leg along nav routes from clue to clue, on the real floor and steps. A leg walks itself out when the story reaches it and fades once followed; a small dyno modifier per leg drives the reveal, the fade and the prints catching the light near you.
+- **Footprints** (`src/undeveloped/trail.js`): in Undeveloped, the trails left that day (Mara's shoes, walking and then running, a man's boots, a dog's paws) are splat prints in pale dust, laid leg by leg along nav routes from clue to clue (and up the stairwell), on the real floor and steps. They walk themselves in as play begins, trails sharing a corridor keep to their own lanes, and each fades once what it leads to is documented; a small dyno modifier per leg drives the reveal, the fade and the prints catching the light near you.
 - **The photo highlight** (`src/undeveloped/view.js`): in Undeveloped, what the camera frames and what a photo captured light up in the splat vertex shader. Each clue has an ellipsoid region and an optional colour key (paint, white paper, wood on a cool floor) that picks out its own splats; those glow warm and swell into a soft halo, strongest on splats seen edge-on (the object's contour), and after the shutter a band of light sweeps up them while the rest of the view dims for a moment.
 - **The edge of the world** (`src/shared/edge-field.js`): where the capture runs out, splats ripple and dissolve, into black fog at night and into overexposed haze by day, driven by a distance field baked from the nav graph.
 - **The entity** (`src/residue/figure.js`, `src/residue/entity.js`):

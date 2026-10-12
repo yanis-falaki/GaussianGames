@@ -108,6 +108,7 @@ $("start").onclick = () => {
   music.start();
   state.started = true;
   state.t0 = performance.now();
+  trails?.release(); // the trails walk themselves in as play begins (or during the opening)
   lock();
   // the opening, over a slow walk through the hall (every time; easy to skip)
   $("title").classList.add("leaving");
@@ -435,24 +436,19 @@ function updateHud() {
 const currentChapter = () => { const i = state.solved.indexOf(false); return i < 0 ? CASE.CHAPTERS.length - 1 : i; };
 const documented = (id) => state.evidence.has(id);
 
-// Which legs are showing follows the story: a chapter's legs once it is open (and their `after`
-// clue documented), faded once what they lead to is documented or the chapter is confirmed.
-// While the notebook or a document is open nothing changes; it happens when you're back.
+// Every leg is on show from the start (several leads to choose from) and fades once what it
+// leads to is documented; the always-on ones (the stairs) never fade. While the notebook or a
+// document is open nothing changes; it happens when you're back.
 function updateTrails(initial = false) {
   if (!trails) return;
   if (state.ui && !initial) { state.trailsPending = true; return; }
   state.trailsPending = false;
-  const cur = currentChapter(), said = [];
   for (const leg of trails.legs) {
     const d = leg.def;
-    let want = "hidden";
-    if (d.chapter < cur || state.solved[d.chapter]) want = "faded"; // the story so far
-    else if (d.chapter === cur && (!d.after || documented(d.after))) want = (d.done ?? [d.to]).some(documented) ? "faded" : "active";
-    const was = leg.state;
-    if (trails.set(d.id, want) && was === "hidden" && want === "active" && d.say && !initial) said.push(d.say);
-    trailMotes.set((m) => m.leg === d.id, want === "active" ? 1 : 0);
+    const want = d.always ? "always" : (d.done ?? [d.to]).some(documented) ? "faded" : "active";
+    trails.set(d.id, want);
+    trailMotes.set((m) => m.leg === d.id, want === "faded" ? 0 : 1);
   }
-  if (said.length) { progress(); setTimeout(() => toast(said.join("<br>"), 6000), 900); }
 }
 
 const progress = () => (state.idle = 0);
@@ -552,7 +548,9 @@ renderer.setAnimationLoop(() => {
     // the first time you come across the footprints
     if (trails && !state.sawTrail && trails.activePrints().some((p) => p.distanceToSquared(player.pos) < 2.2 && Math.abs(p.y - player.pos.y) < 0.6)) {
       state.sawTrail = true;
-      toast("Footprints in the dust, small and fresh. Hers: they lead away from the window.", 5500);
+      const stairs = trails.get("stairs")?.prints.some((p) => p.distanceToSquared(player.pos) < 2.2);
+      toast(stairs ? "Footprints in the dust, small and fresh. Hers. They lead to the stairs."
+        : "Footprints in the dust, small and fresh. Hers. More than one trail: follow any of them.", 5500);
     }
     if (!state.ui && !state.paused) {
       state.idle += dt; state.sinceCue += dt;

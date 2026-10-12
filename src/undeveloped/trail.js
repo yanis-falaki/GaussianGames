@@ -4,9 +4,10 @@
 // dust laid on the floor along a nav route (World.navAstar), so prints follow the real floor and
 // the real steps.
 //
-// A leg is hidden until the story reaches it, then its prints appear one after another from its
-// start, as if being walked. Once what it leads to has been documented it fades to a faint
-// trace. Prints close to you catch the light a little, and pulse() brightens the open legs for
+// Every leg is on show from the start of the game: when play begins their prints appear one after
+// another from each leg's start, as if being walked. Once what a leg leads to has been documented
+// it fades to a faint trace. Legs that share a corridor walk in lanes (`lane`: metres to the
+// walker's right), so there-and-back trails and the stairs stay readable. Prints close to you catch the light a little, and pulse() brightens the open legs for
 // a few seconds (the lost-player cue in main.js). Opacity, the reveal and the glow live in a
 // small dyno modifier per leg (generation pass): changing them only needs a regeneration while
 // something animates, throttled to ~10 Hz; walking regenerates anyway.
@@ -23,6 +24,7 @@ export const WALKERS = {
 };
 
 const FADED = 0.22;     // opacity of a leg whose lead has been followed
+const ALWAYS = 0.9;     // the legs shown all game long
 const REVEAL_MPS = 9;   // how fast a new leg "walks" itself out (metres of trail per second)
 const REVEAL_MAX = 3.2; // ... but never longer than this (s)
 
@@ -63,10 +65,12 @@ function trim(pts, d, fromEnd) {
 
 // the walking route between two points on the nav graph, a little short of both ends (prints
 // stop before the object instead of running under it)
-export function legRoute(world, from, to, { start = 0.5, end = 0.7 } = {}) {
+// tail: keep only the last `tail` metres of the walk
+export function legRoute(world, from, to, { start = 0.5, end = 0.7, tail = 0 } = {}) {
   const path = world.navAstar(world.nearestNode(from), world.nearestNode(to));
   if (!path) return null;
   let pts = world.navSmooth(path, 40, Infinity).map((n) => new THREE.Vector3(n.x, n.y, n.z));
+  if (tail && polyLength(pts) > tail) pts = trim(pts, polyLength(pts) - tail, false);
   const len = polyLength(pts);
   if (len < start + end + 0.6) return pts;
   pts = trim(pts, start, false);
@@ -106,7 +110,7 @@ function stamp(kind, c, ang, left, fresh, R, out) {
 
 // the prints along a route. Returns splats [x, y, z, size, opacity] in walking order and the
 // print centres
-export function layPrints(world, route, walkerKind, seed = 31) {
+export function layPrints(world, route, walkerKind, seed = 31, lane = 0.1) {
   const W = WALKERS[walkerKind];
   let s = seed;
   const R = () => ((s = (s * 16807) % 2147483647) / 2147483647);
@@ -114,7 +118,7 @@ export function layPrints(world, route, walkerKind, seed = 31) {
   const steps = resample(route, W.stride);
   steps.forEach(({ p, dir, along }, i) => {
     const left = i % 2 === 0;
-    let side = left ? -W.gait : W.gait;
+    let side = (left ? -W.gait : W.gait) + lane;
     if (W.wander) side += Math.sin(along * 1.9 + seed) * W.wander * Math.min(1, along / 1.5);
     const c = p.clone().add(new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(side));
     const g = world.groundNear(c.x, c.z, p.y, 0.35, 0.6);
@@ -171,9 +175,9 @@ export class Trails {
     this.onRegen = onRegen;
     this.legs = [];
     defs.forEach((def, i) => {
-      const route = legRoute(world, point(def.from), point(def.to));
+      const route = legRoute(world, point(def.from), point(def.to), { tail: def.tail ?? 0 });
       if (!route) { console.warn(`[trail] no route for leg ${def.id}`); return; }
-      const { splats, prints } = layPrints(world, route, def.walker, 31 + i * 97);
+      const { splats, prints } = layPrints(world, route, def.walker, 31 + i * 97, def.lane ?? 0.1);
       const uOpacity = dyno.dynoFloat(0), uReveal = dyno.dynoFloat(0);
       const mesh = new SplatMesh({
         constructSplats: (out) => {
@@ -191,17 +195,21 @@ export class Trails {
     });
     this.pulseT = 0;
     this.quant = 0;
+    this.held = true; // nothing walks in until release() (the start of play)
   }
+
+  // start the walk-in (once, when play begins)
+  release() { this.held = false; }
 
   get(id) { return this.legs.find((l) => l.def.id === id); }
 
-  // "hidden" | "active" (being followed) | "faded" (followed, or a closed chapter)
+  // "hidden" | "active" (a lead) | "always" (shown all game) | "faded" (followed, or a closed chapter)
   set(id, state) {
     const leg = this.get(id);
     if (!leg || leg.state === state) return false;
     const was = leg.state;
     leg.state = state;
-    leg.target = state === "active" ? 1 : state === "faded" ? FADED : 0;
+    leg.target = state === "active" ? 1 : state === "always" ? ALWAYS : state === "faded" ? FADED : 0;
     if (was === "hidden" && state !== "hidden") {
       leg.mesh.visible = true;
       leg.revealT = 0;
@@ -211,10 +219,10 @@ export class Trails {
     return true;
   }
 
-  // print centres of the legs being followed
-  activePrints() { return this.legs.filter((l) => l.state === "active").flatMap((l) => l.prints); }
+  // print centres of the legs on show (leads and the always-on ones)
+  activePrints() { return this.legs.filter((l) => l.state === "active" || l.state === "always").flatMap((l) => l.prints); }
 
-  // nearest print of an open leg to p: { print, leg, dist } or null
+  // nearest print of an open lead to p: { print, leg, dist } or null
   nearestActive(p) {
     let best = null;
     for (const leg of this.legs) {
@@ -235,7 +243,7 @@ export class Trails {
     let changing = false;
     for (const leg of this.legs) {
       if (leg.state === "hidden" && leg.opacity === 0) continue;
-      if (leg.revealT < leg.revealDur) { leg.revealT = Math.min(leg.revealDur, leg.revealT + dt); changing = true; }
+      if (!this.held && leg.revealT < leg.revealDur) { leg.revealT = Math.min(leg.revealDur, leg.revealT + dt); changing = true; }
       const k = leg.revealDur ? leg.revealT / leg.revealDur : 1;
       // reveal along the walk: the splats are in walking order
       leg.reveal = k >= 1 ? leg.count + 1 : Math.floor(leg.count * k * (2 - k));

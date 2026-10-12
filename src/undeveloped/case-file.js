@@ -2,31 +2,30 @@
 // were picked with tools/author.mjs (world space, y-up). Fiction: names and events are invented.
 
 export const SPAWN = { x: 10.6, y: -1.5, z: 9.3, yaw: -1.35 };
-// Footprints in the dust (trail.js), leg by leg in the order of the story. Each leg runs from a
-// clue (or a point) to the clue it leads to, and is walked by mara | run (Mara running) | man |
-// dog. It appears once its chapter is open and `after` (if any) has been documented, and fades
-// once any of `done` (default: its `to`) has been. `say`: the caption when it appears.
+// Footprints in the dust (trail.js). Each leg runs from a clue (or a point) to the clue it leads
+// to, walked by mara | run (Mara running) | man | dog. Every leg is on show from the start, so
+// there are always several leads to choose from; each fades once any of `done` (default: its
+// `to`) has been documented. `always`: never fades. `lane`: metres to the walker's right
+// (default 0.1), so trails sharing a corridor or the stairs sit side by side. Grouped by the
+// chapter whose clues they lead to.
 export const TRAILS = [
+  // the way up: the last stretch of her walk to the upstairs landing, from the start (players
+  // miss the stairwell without it). `tail`: only the last metres of the route are marked
+  { id: "stairs", always: true, walker: "mara", from: [10.6, -1.5, 9.3], to: [-1.0, 2.25, 18.0], tail: 15, lane: -0.15 },
   // I. Getting in: from the window she climbed through, along her tags, to the kitchen
   { id: "in", chapter: 0, walker: "mara", from: "frame", to: "heart_pink_small" },
-  { id: "kitchen", chapter: 0, walker: "mara", from: "heart_pink_small", to: "heart_kitchen", after: "heart_pink_small",
-    done: ["heart_kitchen", "kettles"], say: "Her footprints go on, out of the hall and toward the kitchen." },
-  // II. Not alone: back to the hall, where someone had been at her heart; his boots; a dog
-  { id: "back", chapter: 1, walker: "mara", from: "kettles", to: "heart_traced",
-    say: "Her footprints lead back from the kitchen to the dining hall." },
-  { id: "him", chapter: 1, walker: "man", from: "heart_traced", to: "armchairs", after: "heart_traced",
-    say: "Bigger prints by the hearts. Heavy boots, a man's, going back across the hall." },
-  { id: "dog", chapter: 1, walker: "dog", from: "armchairs", to: "bowl", after: "armchairs",
-    done: ["bowl", "terrace_chair", "barrel", "notice"], say: "Paw prints around the armchairs. A dog came in from outside." },
+  { id: "kitchen", chapter: 0, walker: "mara", from: "heart_pink_small", to: "heart_kitchen", done: ["heart_kitchen", "kettles"] },
+  // II. Not alone: her way back to the hall, his boots to where he waited, the dog's paws
+  { id: "back", chapter: 1, walker: "mara", from: "kettles", to: "heart_traced" },
+  { id: "him", chapter: 1, walker: "man", from: "heart_traced", to: "armchairs" },
+  { id: "dog", chapter: 1, walker: "dog", from: "armchairs", to: "bowl", done: ["bowl", "barrel", "notice"] },
+  { id: "dogchair", chapter: 1, walker: "dog", from: "bowl", to: "terrace_chair" }, // (optional) his owner's chair
   // III. Where is Mara: what he dropped, her run, her hiding place, and where she went next
-  { id: "page", chapter: 2, walker: "man", from: "armchairs", to: "page",
-    say: "His boot prints go from the armchairs toward the window." },
-  { id: "run", chapter: 2, walker: "run", from: "heart_traced", to: "flipped",
-    say: "By the hearts her prints change: longer steps, toes dug in. She ran." },
-  { id: "up", chapter: 2, walker: "run", from: "flipped", to: "drawer", after: "flipped",
-    done: ["drawer", "room31_note"], say: "She kept running: out of the hall, and up the stairs." },
-  { id: "out", chapter: 2, walker: "mara", from: "drawer", to: "notice", after: "room31_note",
-    say: "Her footprints leave Room 31 again, walking now, back down the stairs." },
+  { id: "page", chapter: 2, walker: "man", from: "armchairs", to: "page" },
+  { id: "run", chapter: 2, walker: "run", from: "heart_traced", to: "flipped" },
+  { id: "up", chapter: 2, walker: "run", from: "flipped", to: "drawer", done: ["drawer", "room31_note"], lane: 0.16 },
+  { id: "hide", chapter: 2, walker: "mara", from: "drawer", to: "wardrobe" }, // (optional) where she hid
+  { id: "out", chapter: 2, walker: "mara", from: "drawer", to: "notice", lane: 0 },
 ];
 
 // doorway from the dining hall to the terrace (opened in the collision grid only; see main.js)
