@@ -33,6 +33,14 @@ const view = createView({
   onProgress: (e) => { if (e.total) $("progress").textContent = `loading scan ${Math.round((100 * e.loaded) / e.total)}%`; },
 });
 const { camera, renderer } = view;
+// behind the title: the opening's first view, so the part of the building the game opens on is
+// the part that streams in first. Placed straight away (the player doesn't drive the camera
+// until the game starts), exactly as the opening's first frame does.
+{
+  const [x, y, z, yaw, pitch] = CASE.OPENING.path[0];
+  camera.position.set(x, y + 1.62, z);
+  camera.rotation.set(pitch, yaw, 0, "YXZ");
+}
 const canvas = renderer.domElement;
 const audio = new UndevelopedAudio();
 const music = new UndevelopedMusic(audio);
@@ -72,11 +80,7 @@ async function load() {
   view.setEdgeField(buildEdgeField(world));
   // calm investigator: no stamina, a natural walking pace, gentle starts/stops, very little bob
   player = new Player(camera, world, audio, canvas, { stamina: false, walk: 2.1, run: 3.8, accel: 7, decel: 9, bob: 0.35, roll: 0.04 });
-  // behind the title: the opening's first view, so the part of the building the game opens on is
-  // the part that streams in first (the opening then walks you to SPAWN)
-  const [ox, oy, oz, oyaw, opitch] = CASE.OPENING.path[0];
-  player.spawn(ox, oy, oz, oyaw);
-  player.pitch = opitch;
+  player.spawn(...CASE.OPENING.path[0].slice(0, 4)); // the opening then walks you to SPAWN
   $("progress").textContent = "loading scan";
   await view.mesh.initialized;
   watchForSlowFrames(view.quality); // if the full scan is a slideshow here, switch to the lite one
