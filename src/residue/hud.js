@@ -9,7 +9,7 @@ export function updateHud(dt, { state, player, exposures, seen, target, allDone 
   $("battery").style.width = `${state.battery * 100}%`;
   $("lampbar").classList.toggle("low", state.battery < 0.25);
   $("lampbar").classList.toggle("off", !state.lampOn);
-  $("lampstat").textContent = state.winding ? "winding" : state.lampOn ? (state.battery < 0.3 ? "on · dimming" : "on")
+  $("lampstat").textContent = state.winding ? "winding" : !state.lampOn && state.lampLock > 0 ? "settling" : state.lampOn ? (state.battery < 0.3 ? "on · dimming" : "on")
     : state.battery < 0.02 ? "run down" : "off";
   // breath: only shown while it matters
   $("stamina").style.width = `${player.stamina * 100}%`;

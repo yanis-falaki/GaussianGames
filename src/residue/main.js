@@ -100,6 +100,7 @@ const state = {
   windT: 0,     // time to the next pull of the winding cord
   windFlash: 0, // the dynamo surges a little with each pull
   winding: false,
+  lampLock: 0,  // after winding, the lamp can't be switched on again for a moment
   lives: 3,
   scare: 0,
   collected: new Set(),
@@ -196,6 +197,7 @@ document.addEventListener("pointerlockerror", () => {
 function toggleLamp() {
   if (state.paused || state.death > 0) return;
   if (!state.lampOn && state.battery < 0.02) { audio.click(); flashHint("the lamp has run down · hold R to wind it"); return; }
+  if (!state.lampOn && state.lampLock > 0) { audio.click(); flashHint("the dynamo is still settling · wait a moment"); return; }
   state.lampOn = !state.lampOn;
   state.lampToggles = (state.lampToggles ?? 0) + 1;
   audio.click();
@@ -253,6 +255,8 @@ setInterval(syncFullscreenUi, 300);
 // ---------------------------------------------------------------------------- gameplay
 const tmp = new THREE.Vector3();
 const lampDir = new THREE.Vector3();
+const LAMP_SECONDS = 24; // light from a full winding
+const LAMP_LOCK = 3;     // seconds after you stop winding before the lamp can be switched on
 const LAMP_COS = Math.cos(THREE.MathUtils.degToRad(19));
 
 function showNote(e) {
@@ -340,7 +344,7 @@ function update(dt) {
   }
   state.time += dt;
 
-  // --- lamp: a wind-up dynamo lamp. A full winding gives about 30 seconds of light and it never
+  // --- lamp: a wind-up dynamo lamp. A full winding gives about 24 seconds of light and it never
   // recharges on its own. Holding R winds it back up, one pull of the cord at a time: slow, you
   // can barely walk while doing it, and the ratchet is loud enough for her to hear.
   camera.getWorldDirection(lampDir);
@@ -348,6 +352,10 @@ function update(dt) {
   // means standing in the dark, making noise
   const windHeld = player.enabled && !!player.keys.KeyR && state.death <= 0 && state.scare <= 0;
   if (windHeld && state.lampOn && !state.windHeld) { state.lampOn = false; audio.click(); }
+  // letting go of the cord leaves you in the dark a little longer: the lamp can't come back on
+  // for a few seconds after winding
+  if (state.winding && !windHeld) state.lampLock = LAMP_LOCK;
+  state.lampLock = Math.max(0, state.lampLock - dt);
   state.windHeld = windHeld;
   state.winding = windHeld && !state.lampOn;
   state.windT = Math.max(0, state.windT - dt);
@@ -359,7 +367,7 @@ function update(dt) {
   }
   state.windFlash = Math.max(0, state.windFlash - dt * 3);
   if (state.lampOn) {
-    state.battery = Math.max(0, state.battery - dt / 30);
+    state.battery = Math.max(0, state.battery - dt / LAMP_SECONDS);
     if (state.battery <= 0 && state.scare <= 0) { state.lampOn = false; audio.click(); flashHint("the lamp has run down · hold R to wind it"); }
   }
   // it dims (and goes orange) as it runs down, surges with each pull, and flickers when nearly

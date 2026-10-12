@@ -25,7 +25,7 @@ The same building is a horror game at night and a detective game by day.
 | M (or Esc) | menu |
 
 - **Goal:** find the six plates and hold your lamp on each until it develops. They glow faintly on the floor, best seen in the dark.
-- **The lamp:** it runs down in about 30 seconds. Winding it back up means standing in the dark, making noise.
+- **The lamp:** it runs down in about 24 seconds. Winding it back up means standing in the dark, making noise, and it takes a few seconds after you stop winding before it will light again.
 - **Her:** something in the building moves only in the dark. Light holds her still, and enough of it burns her away.
 
 - **The camcorder:** `H` turns its filter on and off (remembered); `?clean` starts without it.
