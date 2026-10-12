@@ -235,10 +235,10 @@ function setCamcorder(on) {
   try { localStorage.setItem("residue.camcorder", on ? "on" : "off"); } catch {}
   flashHint(on ? "camcorder view" : "clean view");
 }
-function flashHint(text) {
+function flashHint(text, ms = 1800) {
   state.flashHint = text;
   clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => (state.flashHint = ""), 1800);
+  hintTimer = setTimeout(() => (state.flashHint = ""), ms);
 }
 
 // ---------------------------------------------------------------------------- fullscreen
@@ -312,6 +312,7 @@ function scriptedGlimpse() {
 const warp = { power: 0, pos: new THREE.Vector3(0, -100, 0) };
 
 function caught() {
+  state.caughtInDark = !state.lampOn;
   state.lives--;
   state.scare = 0.75; // face to face first, then the world comes apart
   entity.scare(camera.position, player.yaw);
@@ -329,6 +330,7 @@ function respawn() {
   entity.reset();
   state.battery = Math.max(state.battery, 0.5);
   state.lampOn = true;
+  if (state.caughtInDark) flashHint("she only gets you in the dark · keep your light on her", 6000);
 }
 
 function update(dt) {

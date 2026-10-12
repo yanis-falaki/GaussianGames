@@ -18,7 +18,7 @@ export const INTRO = [
   "In 1931 Dr. Albrecht Weil photographed the patients of Haus Lindenhof by lamplight, in exposures so long that only those who held perfectly still came out clear.",
   "One girl, Marie, patient no. 31, never held still. On every plate she is a smear. After the last session she was never seen again.",
   "Marie was your grandmother’s sister. The building comes down tomorrow. Tonight you go in with a wind-up lamp and a camcorder to find the six places where his plates were taken.",
-  "<b>Keep your light on what you want to keep. In the dark, things move.</b>",
+  "<b>She hates the light: it burns her away. In the dark, she comes for you.</b>",
 ];
 
 export const EXPOSURES = [

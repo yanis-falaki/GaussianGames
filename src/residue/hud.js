@@ -28,13 +28,14 @@ export function updateHud(dt, { state, player, exposures, seen, target, allDone 
   const first = lesson(dt, state);
   let hint = "";
   if (state.flashHint) hint = state.flashHint;
+  else if (state.dread > 0.45 && !state.lampOn && !state.winding && !(state.lampLock > 0) && state.battery >= 0.02) hint = "she's close · turn your lamp on her, the light burns her";
   else if (first) hint = first;
   else if (tip(state, "her", seen > 0)) hint = "she moves in the dark · hold your light on her to burn her away";
   else if (tip(state, "lowlamp", state.lampOn && state.battery < 0.3)) hint = "your lamp is running down · hold R to wind it (it goes dark while you wind)";
   else if (tip(state, "wind", state.winding)) hint = "winding is loud · she can hear it";
   else if (tip(state, "winded", player.winded)) hint = "out of breath · walk until it comes back";
   else if (tip(state, "run", state.walkTime > 10)) hint = "hold Shift to run";
-  else if (tip(state, "remind", state.collected.size === 0 && tut.step >= 3 && tut.t > 75)) hint = "the plates glow on the floor in the dark · hold your lamp on one to develop it";
+  else if (tip(state, "remind", state.collected.size === 0 && tut.step >= 4 && tut.t > 75)) hint = "the plates glow on the floor in the dark · hold your lamp on one to develop it";
   else if (allDone) hint = "a window by the terrace door has opened · follow the daylight out";
   else if (target >= 0) hint = "hold the light";
   else if (!state.lampOn && state.battery < 0.02 && !state.winding) hint = "hold R to wind the lamp";
@@ -62,9 +63,12 @@ function lesson(dt, state) {
       if (((state.lampToggles ?? 0) >= 2 && tut.t > 3) || tut.t > 14) next();
       return "F turns your lamp on and off";
     case 1:
+      if (tut.t > 7) next();
+      return "your light burns her · in the dark she comes for you";
+    case 2:
       if ((state.darkTime ?? 0) > 2.5 || tut.t > 14) next();
       return "the plates glow faintly on the floor · switch your lamp off to spot them";
-    case 2:
+    case 3:
       if (state.developing >= 0 || state.collected.size > 0 || tut.t > 16) next();
       return "walk up to a glowing plate and hold your lamp on it to develop it";
   }
