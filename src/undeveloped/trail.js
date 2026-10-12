@@ -100,7 +100,7 @@ function stamp(kind, c, ang, left, fresh, R, out) {
     const v = (R() * 2 - 1) * w * (boot ? 1.1 : 1) + (heel ? 0 : 0.006);
     if (Math.abs((u * groove) % 1) < 0.28) continue; // tread grooves
     if (run && !heel && R() < 0.35) u += 0.03 + R() * 0.06;  // pushed off: the toe smears forward
-    put(u * L, v * L, (0.007 + R() * 0.004) * (boot ? 1.15 : 1), 0.45 + R() * 0.25);
+    put(u * L, v * L, (0.007 + R() * 0.004) * (boot ? 1.15 : 1), (0.45 + R() * 0.25) * (run ? 1.3 : 1)); // (fewer splats when running: denser ones)
   }
 }
 

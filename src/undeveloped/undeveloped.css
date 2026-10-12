@@ -178,12 +178,12 @@ button { font: inherit; cursor: pointer; }
 
 /* a chapter opening: its title, question and the story so far */
 #chapter-card { position: fixed; left: 50%; top: 13vh; transform: translate(-50%, -6px); width: min(560px, 86vw); text-align: center; pointer-events: none; padding: 26px 40px;
-  background: radial-gradient(closest-side, rgba(12,10,8,.5), rgba(12,10,8,.28) 60%, transparent);
+  background: radial-gradient(closest-side, rgba(12,10,8,.62), rgba(12,10,8,.4) 55%, transparent);
   opacity: 0; transition: opacity 1s ease, transform 1.2s ease; text-shadow: 0 1px 10px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.6); z-index: 15; }
 #chapter-card.on { opacity: 1; transform: translate(-50%, 0); }
 #chapter-card small { display: block; font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .22em; text-transform: uppercase; color: #ffd9a0; }
 #chapter-card h2 { margin: 10px 0 6px; font: 600 clamp(20px, 2.6vw, 28px)/1.3 "IBM Plex Sans", sans-serif; color: #fff; }
-#chapter-card p { margin: 0; font: 500 22px/1.3 "Caveat", cursive; color: #f3ead8; }
+#chapter-card p { margin: 0; font: 500 24px/1.3 "Caveat", cursive; color: #fff; }
 #hud-chapter { color: rgba(255,255,255,.7); max-width: 60vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- the ending: the light washes out, then the case closes */

@@ -34,7 +34,7 @@ The site's public address, used by the link-preview tags (Open Graph, Twitter ca
 
 These are URL parameters, never shown in the menus:
 
-- `?debug`: exposes the game on `window` (`game`, `tp()`, `go()` in RESIDUE; `dev` in Undeveloped) and turns on `P` for a freeze frame (and `G` for a visible entity in RESIDUE).
+- `?debug`: exposes the game on `window` (`game`, `tp()`, `go()` in RESIDUE; `dev` in Undeveloped, where `dev.photograph(id)` walks up to a clue and documents it and `dev.trails` holds the footprint legs) and turns on `P` for a freeze frame (and `G` for a visible entity in RESIDUE).
 - `?bench`: the benchmark API (`window.bench`): `walk()` in both games (`src/shared/walk-bench.js`), plus RESIDUE's render-settings tools (`src/residue/bench.js`).
 - `?full` / `?lite`: force a quality tier. `?spz` draws every original splat with no LoD (the old full mode), `?lod` the single-file LoD tree, `?scene=<url>` another scene file.
 - `?detail=`, `?res=`, `?alphacut=`, `?focal=`: fix the splat budget or the render scale, override the alpha cut or Spark's focal adjustment. `?fixed` turns adaptive quality off. `?pages=` sets Spark's GPU page pool for streamed chunks. `?ext` uses the 32-byte splat encoding (RESIDUE).

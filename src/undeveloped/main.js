@@ -84,6 +84,7 @@ async function load() {
   trailMotes = new Motes(view.scene, trails.legs.flatMap((leg) =>
     leg.prints.filter((_, i) => i % 10 === 4).map((v, i) => ({ id: `${leg.def.id}:${i}`, leg: leg.def.id, v, r: 0.05 }))), { per: 26, strength: 0 });
   updateTrails(true);
+  updateHud();
   // let Spark settle before we allow entry
   $("progress").textContent = "developing the scan";
   await waitForSteadyFrames(30, 30000);
