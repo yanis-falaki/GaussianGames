@@ -361,17 +361,20 @@ function takePhoto() {
 
 const thumb = document.createElement("canvas");
 thumb.width = 640; thumb.height = 360;
+const raw = document.createElement("canvas"); // the frame itself, before any bracket is drawn on it
+raw.width = thumb.width; raw.height = thumb.height;
 function capture() {
   const ctx = thumb.getContext("2d");
   const w = canvas.width, h = canvas.height, ar = 16 / 9;
   const sw = Math.min(w, h * ar), sh = sw / ar; // centre crop to 16:9
-  ctx.drawImage(canvas, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, thumb.width, thumb.height);
+  raw.getContext("2d").drawImage(canvas, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, raw.width, raw.height);
   const hits = framed(0.6).map((x) => x.clue);
-  // the viewfinder's bracket stays in the photo, around each clue it caught, in the same style
-  // as the live one (corners, gold, a soft shadow), scaled to the print
+  // the viewfinder's bracket stays in the photo around the clue it shows, in the same style as
+  // the live one (corners, gold, a soft shadow), scaled to the print. One shot can catch several
+  // clues: each one's photo carries only its own bracket.
   const k = thumb.width / (sw * innerWidth / w); // print pixels per screen (CSS) pixel
   const arm = Math.max(10, 13 * k), lw = Math.max(2, 2 * k);
-  for (const c of hits) {
+  const bracket = (c) => {
     const b = bracketBox(c, w, h, 44 * w / innerWidth);
     const f = thumb.width / sw, x = (b.L - (w - sw) / 2) * f, y = (b.T - (h - sh) / 2) * f, bw = b.w * f, bh = b.h * f;
     ctx.save();
@@ -384,23 +387,24 @@ function capture() {
     }
     ctx.stroke();
     ctx.restore();
-  }
-  const img = thumb.toDataURL("image/jpeg", 0.85);
+  };
+  // the frame with brackets around just these clues
+  const shot = (clues) => { ctx.drawImage(raw, 0, 0); clues.forEach(bracket); return thumb.toDataURL("image/jpeg", 0.85); };
   const fresh = hits.filter((c) => !state.evidence.get(c.id)?.img);
   // what was captured lights up: its own splats glow and a band of light sweeps up them
   hits.slice(0, 3).forEach((c, i) => flashes.push({ clue: c, t: 0, slot: 1 + i, strength: fresh.includes(c) ? 1 : 0.45 }));
   if (fresh.length) {
-    for (const c of fresh) addEvidence(c, img);
+    for (const c of fresh) addEvidence(c, shot([c]));
     const one = fresh[0];
-    showPrint(img, fresh.length > 1 ? fresh.map((c) => c.label).join(" · ") : one.label,
+    showPrint(shot(fresh), fresh.length > 1 ? fresh.map((c) => c.label).join(" · ") : one.label,
       fresh.length > 1 ? "All in your notebook now." : one.note, "Photographed");
     return;
   }
-  if (hits.length) return showPrint(img, hits[0].label, "You already have this one in your notebook.", "Already in the notebook", "dim");
+  if (hits.length) return showPrint(shot([hits[0]]), hits[0].label, "You already have this one in your notebook.", "Already in the notebook", "dim");
   // nothing that counts: say why, gently (too far, or not in the middle of the frame)
   const far = framed(0.6, 2.4).find((x) => x.dist > x.clue.range + x.clue.r && !state.evidence.get(x.clue.id)?.img);
   const edge = !far && framed(0.95).find((x) => !state.evidence.get(x.clue.id)?.img);
-  showPrint(img, "Nothing of note", far ? "Something's there, but too far away to make out. Get closer."
+  showPrint(shot([]), "Nothing of note", far ? "Something's there, but too far away to make out. Get closer."
     : edge ? "Something at the edge of the frame. Centre it." : "Nothing here tells you anything about Mara.", "", "none");
 }
 
