@@ -1,7 +1,90 @@
-// ?bench : fly a fixed camera path through the building under several render configurations
-// and report frame time + GPU time for each. Renders at a fixed 1920x1080 regardless of the
-// window so results reflect fullscreen play.
+// RESIDUE's benchmark (residue.html?bench), used by tools/bench/ to tune the render settings.
+// installBenchApi() exposes window.bench: fly a fixed camera path under a render config and
+// report frame time + GPU time, capture fixed viewpoints, and score them (SSIM / PSNR) against
+// reference captures. Renders at a fixed 1920x1080 regardless of the window so results reflect
+// fullscreen play. Loaded only with ?bench (see main.js).
 import * as THREE from "three";
+import { U } from "./lighting.js";
+
+const $ = (id) => document.getElementById(id);
+
+// ctx: { state, renderer, spark, camera, mesh, player, fx, entity, renderFrame }
+export function installBenchApi(ctx) {
+  const { state, renderer, spark, camera, mesh, player, fx, entity } = ctx;
+  state.benching = true;
+  for (const id of ["title", "hud", "rec", "dot", "grain", "vignette", "fscorner", "pause"]) $(id).style.display = "none";
+  entity.active = false;
+  const cctx = { renderer, spark, camera, mesh };
+  const pose = (x, y, z, yaw, pitch = -0.1) => {
+    player.pos.set(x, y, z);
+    player.targetY = y;
+    player.yaw = yaw;
+    player.pitch = pitch;
+    player.update(0, {});
+    fx.update({ time: 10, camera, lampOn: 1, dt: 0 }); // fixed time: deterministic frames
+  };
+  window.__benchRender = ctx.renderFrame;
+  window.bench = {
+    apply: (cfg) => applyConfig(cctx, cfg),
+    perf: (cfg, seconds = 10) => runBench({ ...cctx, configs: [cfg], seconds, onFrame: (x, y, z, yaw) => pose(x, y, z, yaw) }),
+    // capture the fixed views; unlit = raw captured colour (judges detail), lit = the game look
+    capture: async (cfg, settleMs, unlit = true, indices = null) => {
+      applyConfig(cctx, cfg);
+      U.unlit.value = unlit ? 1 : 0;
+      const shots = await captureViews({ renderer, settleMs, indices, place: (v) => pose(...v) });
+      U.unlit.value = 0;
+      return shots;
+    },
+    compare,
+    views: VIEWS,
+    // render one view in the game's lighting (lamp on) and keep it on screen for a screenshot
+    async show(cfg, i, settleMs = 5000, unlit = false) {
+      applyConfig(cctx, cfg);
+      U.unlit.value = unlit ? 1 : 0;
+      pose(...(Array.isArray(i) ? i : VIEWS[i]));
+      const t0 = performance.now();
+      while (performance.now() - t0 < settleMs) { await new Promise(requestAnimationFrame); window.__benchRender(); }
+    },
+    // shots <-> base64 (8-bit luminance) for storing references on disk
+    encode(shots) {
+      const u8 = new Uint8Array(shots.length * shots[0].length);
+      shots.forEach((sh, k) => { for (let i = 0; i < sh.length; i++) u8[k * sh.length + i] = Math.round(sh[i] * 255); });
+      let bin = "";
+      for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+      return btoa(bin);
+    },
+    async loadRef(kind) {
+      const buf = new Uint8Array(await (await fetch(`assets/bench/ref-${kind}.bin`, { cache: "no-store" })).arrayBuffer());
+      const n = buf.length / VIEWS.length;
+      return VIEWS.map((_, k) => Float32Array.from(buf.subarray(k * n, (k + 1) * n), (v) => v / 255));
+    },
+    // full evaluation of a config against the on-disk references.
+    // quick: fewer views + shorter settles, for fast iteration (final checks use the full run)
+    async evaluate(cfg, seconds = 6, quick = false) {
+      const refU = await this.loadRef("unlit"), refL = await this.loadRef("lit");
+      const [p] = await this.perf(cfg, quick ? 4 : seconds);
+      const views = quick ? [1, 2, 4, 6] : null, turnViews = quick ? [2, 4] : TURN_VIEWS;
+      const settle = cfg.settleMs ?? (quick ? 3000 : 5000);
+      const avg = (q, f) => q.reduce((a, b) => a + f(b), 0) / q.length;
+      const cmp = (shots, ref) => shots.map((s, i) => s && compare(s, ref[i])).filter(Boolean);
+      const qU = cmp(await this.capture(cfg, settle, true, views), refU);
+      U.unlit.value = 1;
+      const turns = await captureTurns({ renderer, indices: turnViews, settleMs: quick ? 2000 : 3000, place: (v) => pose(...v) });
+      U.unlit.value = 0;
+      const turnSsim = avg(turns.map((t, k) => compare(t, refU[turnViews[k]])), (x) => x.ssim);
+      const qL = cmp(await this.capture(cfg, settle, false, views), refL);
+      const r = {
+        ...p,
+        ssim: +avg(qU, (x) => x.ssim).toFixed(4), minSsim: +Math.min(...qU.map((x) => x.ssim)).toFixed(4),
+        turnSsim: +turnSsim.toFixed(4),
+        litSsim: +avg(qL, (x) => x.ssim).toFixed(4), minLitSsim: +Math.min(...qL.map((x) => x.ssim)).toFixed(4),
+      };
+      console.log("[eval]", JSON.stringify(r));
+      return r;
+    },
+  };
+  console.log("[bench] ready");
+}
 
 // [x, y(feet), z, yaw]: kitchen -> hall -> east windows -> lounge, turning as it goes
 const PATH = [
@@ -11,7 +94,7 @@ const PATH = [
 
 const SEG = PATH.slice(1).map((b, i) => Math.hypot(b[0] - PATH[i][0], b[2] - PATH[i][2]));
 
-export async function runBench({ renderer, spark, camera, mesh, configs, seconds = 10, onFrame }) {
+async function runBench({ renderer, spark, camera, mesh, configs, seconds = 10, onFrame }) {
   const gl = renderer.getContext();
   const tq = gl.getExtension("EXT_disjoint_timer_query_webgl2");
   renderer.setPixelRatio(1);
@@ -94,18 +177,7 @@ function fmt(rows) {
     .join("\n");
 }
 
-
-// Re-anchor the LoD selection only after the camera has moved `spark.lodStep` metres, so
-// walking doesn't trigger a traversal + full re-sort every frame.
-export function lodAnchor(spark, camera) {
-  if (!spark.lodStep) return;
-  const p = camera.position;
-  if (!spark.lodPosOverride || spark.lodPosOverride.distanceTo(p) > spark.lodStep) {
-    spark.lodPosOverride = p.clone();
-  }
-}
-
-export function applyConfig({ renderer, spark, camera, mesh }, cfg) {
+function applyConfig({ renderer, spark, camera, mesh }, cfg) {
   const pr = cfg.pixelScale ?? 1;
   renderer.setSize(Math.round(1920 * pr), Math.round(1080 * pr), false);
   renderer.domElement.style.width = "100vw";
@@ -137,7 +209,7 @@ export function applyConfig({ renderer, spark, camera, mesh }, cfg) {
 
 // ---------------------------------------------------------------------------- quality
 // Fixed viewpoints [x, y(feet), z, yaw, pitch]
-export const VIEWS = [
+const VIEWS = [
   [-2.0, -1.5, -1.5, 3.0, -0.1], [0.5, -1.5, 1.0, 2.4, -0.2], [8.15, -1.5, 8.6, 3.14, -0.25],
   [10.5, -1.5, 12.0, 0.6, 0.0], [12.0, -1.5, 20.0, 1.9, -0.1], [6.0, -1.5, 26.0, 0.3, -0.15],
   [0.2, 2.2, 25.6, 0.0, -0.2], [13.3, -1.6, 24.5, -1.57, 0.0],
@@ -145,7 +217,7 @@ export const VIEWS = [
 const QW = 960, QH = 540;
 
 // render each view after letting LoD settle; return downsampled luminance arrays
-export async function captureViews({ renderer, place, settleMs = 1800, indices = null }) {
+async function captureViews({ renderer, place, settleMs = 1800, indices = null }) {
   const gl = renderer.getContext();
   const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
   const px = new Uint8Array(W * H * 4);
@@ -160,26 +232,13 @@ export async function captureViews({ renderer, place, settleMs = 1800, indices =
     }
     window.__benchRender();
     gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    // box-downsample to QWxQH luminance (gamma-encoded, as displayed)
-    const lum = new Float32Array(QW * QH);
-    const cnt = new Float32Array(QW * QH);
-    for (let y = 0; y < H; y++) {
-      const qy = Math.min(QH - 1, Math.floor((y * QH) / H));
-      for (let x = 0; x < W; x++) {
-        const i = (y * W + x) * 4;
-        const q = qy * QW + Math.min(QW - 1, Math.floor((x * QW) / W));
-        lum[q] += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-        cnt[q]++;
-      }
-    }
-    for (let i = 0; i < lum.length; i++) lum[i] /= cnt[i] * 255;
-    shots.push(lum);
+    shots.push(downsample(px, W, H));
   }
   return shots;
 }
 
 // mean SSIM (8x8 windows) and PSNR between two luminance images
-export function compare(a, b) {
+function compare(a, b) {
   let mse = 0;
   for (let i = 0; i < a.length; i++) mse += (a[i] - b[i]) ** 2;
   mse /= a.length;
@@ -205,8 +264,8 @@ export function compare(a, b) {
 
 // Transient quality right after a fast 180-degree turn: settle facing away, snap around, wait
 // `delayMs`, capture. Penalises foveated LoD (which needs a re-traversal + sort after turning).
-export const TURN_VIEWS = [2, 4, 5];
-export async function captureTurns({ renderer, place, delayMs = 150, settleMs = 3000, indices = TURN_VIEWS }) {
+const TURN_VIEWS = [2, 4, 5];
+async function captureTurns({ renderer, place, delayMs = 150, settleMs = 3000, indices = TURN_VIEWS }) {
   const gl = renderer.getContext();
   const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
   const px = new Uint8Array(W * H * 4);
@@ -226,6 +285,7 @@ export async function captureTurns({ renderer, place, delayMs = 150, settleMs = 
   return shots;
 }
 
+// box-downsample to QWxQH luminance (gamma-encoded, as displayed)
 function downsample(px, W, H) {
   const lum = new Float32Array(QW * QH);
   const cnt = new Float32Array(QW * QH);

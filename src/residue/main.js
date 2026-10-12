@@ -1,75 +1,32 @@
+// RESIDUE: the entry point (residue.html). Builds the view, loads the scan, the collision world
+// and the entity, wires up the controls and screens, and runs the game loop. The rules of play
+// are update() below; the HUD text is hud.js, the render pipeline view.js, the lighting and
+// plate effects lighting.js, and the entity entity.js.
 import * as THREE from "three";
-import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { World } from "../shared/world.js";
-import { ResidueAudio } from "./audio.js";
 import { Player } from "../shared/player.js";
-import { SceneFX, U, installShading } from "./lighting.js";
-import { Entity } from "./entity.js";
-import * as STORY from "./story.js";
-import * as BENCH from "./bench.js";
-import { RENDER } from "../shared/render-config.js";
 import { BOUNDARIES, UPPER_FLOORS } from "../shared/scan.js";
 import { buildEdgeField } from "../shared/edge-field.js";
-import { Camcorder } from "./camcorder.js";
-import { Bulb, buildLightVis } from "./bulb.js";
+import { createScanMesh, waitForSteadyFrames } from "../shared/splat-scene.js";
 import { toggleFullscreen, sinceLockChange } from "../shared/fullscreen.js";
-import { chooseQuality, watchForSlowFrames, bindQualityButtons, QUALITY, gpuName } from "../shared/quality.js";
+import { watchForSlowFrames, bindQualityButtons, gpuName } from "../shared/quality.js";
+import { createView } from "./view.js";
+import { ResidueAudio } from "./audio.js";
+import { SceneFX } from "./lighting.js";
+import { Entity } from "./entity.js";
+import { Bulb, buildLightVis } from "./bulb.js";
+import { updateHud } from "./hud.js";
+import * as STORY from "./story.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has("debug") || params.has("bench");
 
-// ---------------------------------------------------------------------------- renderer
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1) * RENDER.pixelScale);
-renderer.setSize(innerWidth, innerHeight);
-renderer.setClearColor(0x000000, 1);
-$("app").appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 80);
-scene.add(camera);
-// the handheld camcorder look (H toggles, remembered per browser; ?clean starts without it)
-const camcorder = new Camcorder(renderer, camera, 72);
-try { if (localStorage.getItem("residue.camcorder") === "off") camcorder.setOn(false); } catch {}
-if (params.has("clean")) camcorder.setOn(false);
-
-// full scan for dedicated GPUs, a streamed lighter one for integrated GPUs (see quality.js)
-const quality = chooseQuality(renderer, params);
-const Q = QUALITY[quality];
+// ---------------------------------------------------------------------------- view
+const view = createView(params);
+const { renderer, scene, camera, camcorder, spark, quality, tier } = view;
 if (DEBUG) console.log(`quality ${quality} (${gpuName(renderer)})`);
 bindQualityButtons(quality);
-
-const spark = new SparkRenderer({
-  renderer,
-  lodSplatScale: Number(params.get("detail")) || Q.lodSplatScale || 1.0,
-  behindFoveate: RENDER.behindFoveate,
-  coneFoveate: RENDER.coneFoveate,
-  coneFov0: RENDER.coneFov0,
-  coneFov: RENDER.coneFov,
-  maxStdDev: RENDER.maxStdDev,
-  minSortIntervalMs: RENDER.minSortIntervalMs,
-  focalAdjustment: Number(params.get("focal")) || RENDER.focalAdjustment,
-  // We decide when splats get regenerated (see renderFrame); lighting lives in the vertex shader.
-  autoUpdate: false,
-});
-installShading(spark);
-// Into a render target (the camcorder pass) Spark would switch to linear output; the splats are
-// meant to blend in sRGB as on screen, so keep its output identical either way.
-Object.defineProperty(spark.material.uniforms.encodeLinear, "value", { get: () => false, set() {} });
-spark.material.uniforms.rsAlphaCut.value = params.has("alphacut") ? Number(params.get("alphacut")) : RENDER.alphaCut;
-// Without foveation detail depends only on where you stand, so pin the orientation the LoD
-// system sees: turning your head then never triggers a re-selection.
-if (!RENDER.foveate) spark.lodQuatOverride = new THREE.Quaternion();
-spark.lodStep = RENDER.lodStep;
-scene.add(spark);
-
-addEventListener("resize", () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  camcorder.resize();
-});
 
 $("credits").innerHTML = STORY.CREDITS;
 STORY.INTRO.forEach((t, i) => {
@@ -91,19 +48,14 @@ async function load() {
   world.setMainFrom(STORY.SPAWN);
   if (DEBUG) console.log("nav nodes", world.nav.length);
 
-  // Load the whole LoD tree into memory up front (no streaming): nothing has to be fetched
-  // mid-game, so there's no waiting for detail to arrive.
-  sanatorium = new SplatMesh({
-    url: params.get("scene") ?? (Q.paged ? RENDER.liteScene : params.has("lod") ? RENDER.lodScene : RENDER.scene),
-    paged: Q.paged || undefined, // the lite scene streams its level-of-detail chunks as needed
-    extSplats: (!Q.paged && params.has("ext")) || undefined, // debug: 32-byte high-precision splat encoding
+  sanatorium = createScanMesh({
+    params, tier,
+    extSplats: (!tier.paged && params.has("ext")) || undefined, // developer switch: 32-byte high-precision splat encoding
     onProgress: (e) => {
       if (e.total) $("progress").textContent = `loading scan  ${Math.round((100 * e.loaded) / e.total)}%`;
     },
   });
-  // the capture is y-down; flip 180deg about X
-  sanatorium.quaternion.set(1, 0, 0, 0);
-  sanatorium.maxSh = Q.maxSh;
+  sanatorium.maxSh = tier.maxSh;
   scene.add(sanatorium);
 
   fx = new SceneFX(sanatorium);
@@ -116,102 +68,18 @@ async function load() {
   $("progress").textContent = "loading scan";
   await sanatorium.initialized;
   watchForSlowFrames(quality); // if the full scan is a slideshow here, switch to the lite one
-  // Spark builds its LoD structures right after loading, which stalls rendering for a few
-  // seconds. Hold the door until frames are coming quickly again.
+  // Hold the door until Spark has settled and frames are coming quickly again.
   $("progress").textContent = "developing the scan";
-  await new Promise((resolve) => {
-    let good = 0, last = performance.now();
-    const t0 = last;
-    (function check() {
-      const now = performance.now();
-      good = now - last < 40 ? good + 1 : 0;
-      last = now;
-      if (good > 45 || now - t0 > 45000) resolve();
-      else requestAnimationFrame(check);
-    })();
-  });
+  await waitForSteadyFrames(45, 45000);
   $("progress").textContent = "";
   $("start").disabled = false;
   $("start").textContent = "Enter";
-  if (params.has("bench")) setupBench();
+  if (params.has("bench")) {
+    const { installBenchApi } = await import("./bench.js");
+    installBenchApi({ state, renderer, spark, camera, mesh: sanatorium, player, fx, entity, renderFrame });
+  }
 }
 
-// ---------------------------------------------------------------------------- benchmark API
-function setupBench() {
-  state.benching = true;
-  for (const id of ["title", "hud", "rec", "dot", "grain", "vignette", "fscorner", "pause"]) $(id).style.display = "none";
-  entity.active = false;
-  const ctx = { renderer, spark, camera, mesh: sanatorium };
-  const pose = (x, y, z, yaw, pitch = -0.1) => {
-    player.pos.set(x, y, z);
-    player.targetY = y;
-    player.yaw = yaw;
-    player.pitch = pitch;
-    player.update(0, {});
-    fx.update({ time: 10, camera, lampOn: 1, dt: 0 }); // fixed time: deterministic frames
-  };
-  window.__benchRender = () => renderFrame();
-  window.bench = {
-    apply: (cfg) => BENCH.applyConfig(ctx, cfg),
-    perf: (cfg, seconds = 10) => BENCH.runBench({ ...ctx, configs: [cfg], seconds, onFrame: (x, y, z, yaw) => pose(x, y, z, yaw) }),
-    // capture the fixed views; unlit = raw captured colour (judges detail), lit = the game look
-    capture: async (cfg, settleMs, unlit = true, indices = null) => {
-      BENCH.applyConfig(ctx, cfg);
-      U.unlit.value = unlit ? 1 : 0;
-      const shots = await BENCH.captureViews({ renderer, settleMs, indices, place: (v) => pose(...v) });
-      U.unlit.value = 0;
-      return shots;
-    },
-    compare: BENCH.compare,
-    views: BENCH.VIEWS,
-    // render one view in the game's lighting (lamp on) and keep it on screen for a screenshot
-    async show(cfg, i, settleMs = 5000, unlit = false) {
-      BENCH.applyConfig(ctx, cfg);
-      U.unlit.value = unlit ? 1 : 0;
-      pose(...(Array.isArray(i) ? i : BENCH.VIEWS[i]));
-      const t0 = performance.now();
-      while (performance.now() - t0 < settleMs) { await new Promise(requestAnimationFrame); window.__benchRender(); }
-    },
-    // shots <-> base64 (8-bit luminance) for storing references on disk
-    encode(shots) {
-      const u8 = new Uint8Array(shots.length * shots[0].length);
-      shots.forEach((sh, k) => { for (let i = 0; i < sh.length; i++) u8[k * sh.length + i] = Math.round(sh[i] * 255); });
-      let bin = "";
-      for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
-      return btoa(bin);
-    },
-    async loadRef(kind) {
-      const buf = new Uint8Array(await (await fetch(`assets/bench/ref-${kind}.bin`, { cache: "no-store" })).arrayBuffer());
-      const n = buf.length / BENCH.VIEWS.length;
-      return BENCH.VIEWS.map((_, k) => Float32Array.from(buf.subarray(k * n, (k + 1) * n), (v) => v / 255));
-    },
-    // full evaluation of a config against the on-disk references.
-    // quick: fewer views + shorter settles, for fast iteration (final checks use the full run)
-    async evaluate(cfg, seconds = 6, quick = false) {
-      const refU = await this.loadRef("unlit"), refL = await this.loadRef("lit");
-      const [p] = await this.perf(cfg, quick ? 4 : seconds);
-      const views = quick ? [1, 2, 4, 6] : null, turnViews = quick ? [2, 4] : BENCH.TURN_VIEWS;
-      const settle = cfg.settleMs ?? (quick ? 3000 : 5000);
-      const avg = (q, f) => q.reduce((a, b) => a + f(b), 0) / q.length;
-      const cmp = (shots, ref) => shots.map((s, i) => s && BENCH.compare(s, ref[i])).filter(Boolean);
-      const qU = cmp(await this.capture(cfg, settle, true, views), refU);
-      U.unlit.value = 1;
-      const turns = await BENCH.captureTurns({ renderer, indices: turnViews, settleMs: quick ? 2000 : 3000, place: (v) => pose(...v) });
-      U.unlit.value = 0;
-      const turnSsim = avg(turns.map((t, k) => BENCH.compare(t, refU[turnViews[k]])), (x) => x.ssim);
-      const qL = cmp(await this.capture(cfg, settle, false, views), refL);
-      const r = {
-        ...p,
-        ssim: +avg(qU, (x) => x.ssim).toFixed(4), minSsim: +Math.min(...qU.map((x) => x.ssim)).toFixed(4),
-        turnSsim: +turnSsim.toFixed(4),
-        litSsim: +avg(qL, (x) => x.ssim).toFixed(4), minLitSsim: +Math.min(...qL.map((x) => x.ssim)).toFixed(4),
-      };
-      console.log("[eval]", JSON.stringify(r));
-      return r;
-    },
-  };
-  console.log("[bench] ready");
-}
 load().catch((e) => {
   console.error(e);
   $("progress").textContent = "failed to load: " + e.message;
@@ -397,15 +265,6 @@ function inBeam(p, maxDist = 14) {
   beamDir.divideScalar(d);
   if (beamDir.dot(lampDir) < LAMP_COS) return false;
   return world.lineOfSight(eye, p);
-}
-
-function roomName(p) {
-  let best = "", bd = 1e9;
-  for (const e of exposures) {
-    const d = e.p.distanceToSquared(p);
-    if (d < bd) { bd = d; best = e.room; }
-  }
-  return best;
 }
 
 function ambientEvents(dt) {
@@ -620,67 +479,7 @@ function update(dt) {
     exertion: Math.max(sprinting ? 0.55 : 0, (1 - player.stamina) * 0.9),
   });
 
-  // --- HUD
-  // lamp: segmented charge, plain-language status, red and pulsing when low
-  $("battery").style.width = `${state.battery * 100}%`;
-  $("lampbar").classList.toggle("low", state.battery < 0.25);
-  $("lampbar").classList.toggle("off", !state.lampOn);
-  $("lampstat").textContent = state.winding ? "winding" : state.lampOn ? (state.battery < 0.3 ? "on · dimming" : "on")
-    : state.battery < 0.02 ? "run down" : "off";
-  // breath: only shown while it matters
-  $("stamina").style.width = `${player.stamina * 100}%`;
-  $("breathrow").style.opacity = player.stamina < 0.98 ? 1 : 0;
-  $("breathstat").textContent = player.winded ? "winded" : "";
-  $("count").textContent = `Plates ${state.collected.size} / ${exposures.length}`;
-  $("lives").textContent = "●".repeat(Math.max(0, state.lives)) + "○".repeat(Math.max(0, 3 - state.lives));
-  const s = Math.floor(state.time);
-  const clock = 23 * 60 + Math.floor(s / 20); // a night clock: one in-game minute every 20s
-  $("tc").textContent = `${String(Math.floor(clock / 60) % 24).padStart(2, "0")}:${String(clock % 60).padStart(2, "0")}`;
-  $("room").textContent = roomName(player.pos);
-  if (!state.lampOn) state.darkTime = (state.darkTime ?? 0) + dt;
-  if (player.speedS > 0.5) state.walkTime = (state.walkTime ?? 0) + dt;
-  const first = lesson(dt);
-  let hint = "";
-  if (state.flashHint) hint = state.flashHint;
-  else if (first) hint = first;
-  else if (tip("her", seen > 0)) hint = "she moves in the dark · hold your light on her to burn her away";
-  else if (tip("lowlamp", state.lampOn && state.battery < 0.3)) hint = "your lamp is running down · hold R to wind it (it goes dark while you wind)";
-  else if (tip("wind", state.winding)) hint = "winding is loud · she can hear it";
-  else if (tip("winded", player.winded)) hint = "out of breath · walk until it comes back";
-  else if (tip("run", state.walkTime > 10)) hint = "hold Shift to run";
-  else if (tip("remind", state.collected.size === 0 && tut.step >= 3 && tut.t > 75)) hint = "the plates glow on the floor in the dark · hold your lamp on one to develop it";
-  else if (allDone) hint = "a window by the terrace door has opened · follow the daylight out";
-  else if (target >= 0) hint = "hold the light";
-  else if (!state.lampOn && state.battery < 0.02 && !state.winding) hint = "hold R to wind the lamp";
-  $("prompt").textContent = hint;
-  $("prompt").style.opacity = hint ? 0.8 : 0;
-}
-
-// first steps: each lesson stays up until you've done it (or a while has passed)
-const tut = { step: 0, t: 0 };
-function lesson(dt) {
-  tut.t += dt;
-  const next = () => { tut.step++; tut.t = 0; state.darkTime = 0; };
-  switch (tut.step) {
-    case 0:
-      if (((state.lampToggles ?? 0) >= 2 && tut.t > 3) || tut.t > 14) next();
-      return "F turns your lamp on and off";
-    case 1:
-      if ((state.darkTime ?? 0) > 2.5 || tut.t > 14) next();
-      return "the plates glow faintly on the floor · switch your lamp off to spot them";
-    case 2:
-      if (state.developing >= 0 || state.collected.size > 0 || tut.t > 16) next();
-      return "walk up to a glowing plate and hold your lamp on it to develop it";
-  }
-  return "";
-}
-
-// show a tip for a few seconds the first time its condition becomes true
-const tipState = {};
-function tip(name, cond) {
-  const t = tipState[name];
-  if (t === undefined) { if (cond) tipState[name] = state.time; return cond; }
-  return state.time - t < 5;
+  updateHud(dt, { state, player, exposures, seen, target, allDone });
 }
 
 function gameOver() {
@@ -702,60 +501,12 @@ function endGame() {
 }
 
 // ---------------------------------------------------------------------------- loop
-// The one place a frame is rendered. The game loop and the benchmark (?bench) both call this,
-// so any change to the render pipeline is exactly what the benchmark measures.
-// Spark only re-generates its splat buffer when we ask. Shading is in the vertex shader and the
-// depth sort is radial (rotation-invariant), so turning your head needs no regeneration at all.
-// We regenerate when: the camera has moved a few cm, a geometric effect is animating, the
-// entity is visible, new LoD results arrived, or as a slow keep-alive.
-const regen = { pos: new THREE.Vector3(1e9, 0, 0), quat: new THREE.Quaternion(), mapping: -1, frames: 0, warm: 120 };
-function needsRegen() {
-  if (!sanatorium?.isInitialized) return true;
-  if (regen.warm > 0) return regen.warm--, true; // just after loading, while the LoD settles
-  if (sanatorium.mappingVersion !== regen.mapping) return true;
-  if (fx?.active) return true;
-  // the entity, and a few frames after she vanishes, so her last frame doesn't linger in the buffer
-  if (entity?.mesh.visible) regen.entityTail = 8;
-  if (regen.entityTail > 0) return regen.entityTail--, true;
-  const step = spark.regenStep ?? RENDER.regenStep;
-  if (camera.position.distanceToSquared(regen.pos) > step * step) return true;
-  if (!spark.lodQuatOverride && Math.abs(camera.quaternion.dot(regen.quat)) < 0.9995) return true; // foveated LoD
-  return ++regen.frames > 30;
-}
-function renderFrame() {
-  camera.updateMatrixWorld();
-  BENCH.lodAnchor(spark, camera);
-  if (needsRegen()) {
-    regen.pos.copy(camera.position);
-    regen.quat.copy(camera.quaternion);
-    regen.mapping = sanatorium?.mappingVersion ?? -1;
-    regen.frames = 0;
-    spark.update({ scene, camera }); // generation runs synchronously; sorting continues async
-  }
-  camcorder.render(scene, camera);
-}
-
+// One frame: advance the game (or the ending), the bulb, the camcorder, then draw.
+const renderFrame = () => view.renderFrame(sanatorium, fx, entity);
 const clock = new THREE.Clock();
-// adaptive detail: step the LoD splat budget down while the frame rate is low (unless ?detail=
-// was given). Stricter for the first ~20s of play, then only if the frame rate collapses, so
-// detail doesn't visibly shift while you play. (It only matters for the streamed lite scene.)
-const adaptive = { on: !params.has("detail"), acc: 0, frames: 0, played: 0 };
-function adapt(rawDt) {
-  if (!adaptive.on || !state.started || state.paused) return;
-  adaptive.played += rawDt;
-  if (adaptive.played < 5) return; // ignore the first seconds: LoD is still settling after Enter
-  adaptive.acc += rawDt;
-  adaptive.frames++;
-  if (adaptive.acc < 1.5) return;
-  const fps = adaptive.frames / adaptive.acc;
-  adaptive.acc = 0;
-  adaptive.frames = 0;
-  const calibrating = adaptive.played < 25;
-  if (fps < (calibrating ? 50 : 38)) spark.lodSplatScale = Math.max(0.3, spark.lodSplatScale * 0.85);
-}
 renderer.setAnimationLoop(() => {
   const rawDt = clock.getDelta();
-  adapt(rawDt);
+  view.adapt(rawDt, state.started && !state.paused);
   const dt = Math.min(rawDt, 0.05);
   if (state.benching) return; // the benchmark drives rendering itself
   if (state.frozen) return; // freeze frame: the canvas keeps showing the last rendered frame
