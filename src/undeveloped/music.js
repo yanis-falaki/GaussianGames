@@ -2,7 +2,7 @@
 // (Karplus-Strong, buffers cached per pitch), a soft felt-piano melody now and then, a dim pad and
 // a sine bass, in a major key at 62-72 BPM. A section plays for a couple of minutes, ends on the
 // tonic, then leaves 30-60s of birds and room tone before the next one (often in another key).
-// It rides on CaseAudio's context, master and reverb, so it sits in the same mix.
+// It rides on UndevelopedAudio's context, master and reverb, so it sits in the same mix.
 
 const LOOKAHEAD = 0.3; // seconds scheduled ahead of ctx.currentTime
 const LEVEL = 0.25; // overall music level into the master
@@ -28,7 +28,7 @@ const KEYS = [5, 2, 7, 3, 10, 0]; // F, D, G, Eb, Bb, C major
 const PENTA = [0, 2, 4, 7, 9];
 const ARP_W = [1, 0.35, 0.7, 0.35, 0.85, 0.35, 0.6, 0.4]; // per eighth in a 4/4 bar
 
-export class CaseMusic {
+export class UndevelopedMusic {
   constructor(audio) {
     this.audio = audio;
     this.enabled = true;

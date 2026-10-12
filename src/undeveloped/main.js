@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createView } from "./view.js";
-import { CaseAudio } from "./audio.js";
-import { CaseMusic } from "./music.js";
+import { UndevelopedAudio } from "./audio.js";
+import { UndevelopedMusic } from "./music.js";
 import { Motes } from "./motes.js";
 import { trailRoute, buildTrail } from "./trail.js";
 import { bindFullscreenButtons, sinceLockChange } from "../shared/fullscreen.js";
@@ -24,8 +24,8 @@ const view = createView({
 });
 const { camera, renderer } = view;
 const canvas = renderer.domElement;
-const audio = new CaseAudio();
-const music = new CaseMusic(audio);
+const audio = new UndevelopedAudio();
+const music = new UndevelopedMusic(audio);
 music.bindButton($("music"));
 const haze = new Haze(view.scene, camera);
 let world, player, motes, trail, trailMotes;

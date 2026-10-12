@@ -31,7 +31,7 @@ function resample(pts, step) {
 export function trailRoute(world, from, to, length) {
   const path = world.navAstar(world.nearestNode(from), world.nearestNode(to));
   if (!path) return null;
-  const legs = world.navSmooth ? world.navSmooth(path) : path;
+  const legs = world.navSmooth(path);
   const pts = legs.map((n) => new THREE.Vector3(n.x, n.y, n.z));
   // trim from the start so only the end of the walk is marked
   let total = 0;

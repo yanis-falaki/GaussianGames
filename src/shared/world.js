@@ -1,5 +1,7 @@
-// Collision + navigation derived directly from the splat cloud.
-// The voxel grid stores opacity-weighted splat density per 10cm cell (see tools/voxelize.py).
+// Collision and navigation derived directly from the splat cloud, used by both games: walkable
+// floors, body clearance, line of sight, and a nav graph with A* for RESIDUE's entity and
+// Undeveloped's footprints. The voxel grid stores opacity-weighted splat density per 10cm cell
+// (built by tools/assets/voxelize.py).
 import * as THREE from "three";
 
 const SOLID = 6; // density threshold (sum of opacity >= 0.6)
@@ -238,22 +240,6 @@ export class World {
       }
     if (best < 0 && mainOnly && reach < 20) return this.nearestNode(p, true, reach + 8);
     return best;
-  }
-
-  // BFS path between nav nodes (grid is uniform so BFS ~ shortest)
-  path(fromIdx, toIdx, maxNodes = 40000) {
-    if (fromIdx < 0 || toIdx < 0) return null;
-    const prev = new Map([[fromIdx, -1]]);
-    const q = [fromIdx];
-    for (let h = 0; h < q.length && q.length < maxNodes; h++) {
-      const c = q[h];
-      if (c === toIdx) break;
-      for (const n of this.nav[c].n) if (!prev.has(n)) { prev.set(n, c); q.push(n); }
-    }
-    if (!prev.has(toIdx)) return null;
-    const out = [];
-    for (let c = toIdx; c !== -1; c = prev.get(c)) out.push(this.nav[c]);
-    return out.reverse();
   }
 
   // ---- smarter queries for the entity: clearance-aware A*, floor-level walkability, smoothing

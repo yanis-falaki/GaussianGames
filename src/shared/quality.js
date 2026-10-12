@@ -53,7 +53,7 @@ export function watchForSlowFrames(quality, { delayMs = 5000, windowMs = 4000, m
 export const QUALITY = {
   full: { paged: false, maxSh: 3 },
   // ~1.25M splats to start (Spark's desktop budget is 2.5M); RESIDUE adapts it to the frame rate
-  lite: { paged: true, maxSh: 1, lodSplatScale: 0.5, lodCap: 0.9 },
+  lite: { paged: true, maxSh: 1, lodSplatScale: 0.5 },
 };
 
 // the title-screen button: shows the version in use; choosing the other reloads into it

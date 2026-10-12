@@ -17,9 +17,7 @@ export const toggleFullscreen = () => (document.fullscreenElement ? exitFullscre
 // label the buttons for what they will do
 export function bindFullscreenButtons(selector = ".fsbtn") {
   const sync = () => {
-    for (const b of document.querySelectorAll(selector)) {
-      if (b.dataset.icon === undefined) b.textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
-    }
+    for (const b of document.querySelectorAll(selector)) b.textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
   };
   for (const b of document.querySelectorAll(selector)) b.addEventListener("click", toggleFullscreen);
   document.addEventListener("fullscreenchange", () => {

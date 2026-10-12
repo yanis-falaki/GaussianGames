@@ -1,4 +1,5 @@
-// First-person controller that walks on floors extracted from the splat cloud.
+// First-person controller for both games: walks on the floors extracted from the splat cloud
+// (World), with head bob, footsteps, stamina, and an optional handheld-camera sway (RESIDUE).
 import * as THREE from "three";
 
 const EYE = 1.62;
@@ -163,9 +164,5 @@ export class Player {
       if (fear > 0.4) { sy += (Math.random() - 0.5) * 0.004 * fear; sp += (Math.random() - 0.5) * 0.004 * fear; }
     }
     this.camera.rotation.set(this.pitch + sp, this.yaw + sy, (effects.roll ?? 0) + bobX * t.roll * (1 + this.handheld) + sr, "YXZ");
-  }
-
-  eye() {
-    return this.camera.position;
   }
 }

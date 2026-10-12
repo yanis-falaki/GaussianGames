@@ -1,6 +1,6 @@
 // Daylight soundscape for Undeveloped: all synthesized. Soft room tone, wind and the odd bird
 // outside the windows, footsteps, a mechanical camera shutter, paper.
-export class CaseAudio {
+export class UndevelopedAudio {
   // opts.ctx / opts.output (optional): ride on an existing context and route into a given node
   // instead of the speakers (the game-select menu uses this for its daylight bed)
   start(opts = {}) {

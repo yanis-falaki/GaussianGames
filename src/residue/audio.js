@@ -1,5 +1,7 @@
-// Fully procedural sound: no audio files, everything is synthesized with WebAudio.
-export class Audio {
+// RESIDUE's sound, synthesised with WebAudio apart from one breathing recording: room tone,
+// HRTF footsteps, the entity's breath and steps, the lamp's ratchet, the bulb's hum, the piano,
+// the plates' shimmer, scares and the heartbeat.
+export class ResidueAudio {
   constructor() {
     this.ctx = null;
   }
@@ -107,11 +109,7 @@ export class Audio {
     const ctx = this.ctx, n = ctx.sampleRate * sec;
     const b = ctx.createBuffer(1, n, ctx.sampleRate);
     const d = b.getChannelData(0);
-    let brown = 0;
-    for (let i = 0; i < n; i++) {
-      brown = (brown + 0.02 * (Math.random() * 2 - 1)) / 1.02;
-      d[i] = Math.random() * 2 - 1;
-    }
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     return b;
   }
 

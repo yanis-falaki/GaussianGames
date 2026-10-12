@@ -4,13 +4,13 @@
 //
 //   night (RESIDUE):     a low detuned drone breathing through a lowpass, tape hiss and camcorder
 //                        motor whine, and now and then a distant creak, knock or breath
-//   day (Undeveloped):   the game's own daylight soundscape (CaseAudio: wind, birds) and harp score
-//                        (CaseMusic), routed into this bed instead of the speakers
+//   day (Undeveloped):   the game's own daylight soundscape (UndevelopedAudio: wind, birds) and harp score
+//                        (UndevelopedMusic), routed into this bed instead of the speakers
 //
 // MenuAudio takes any BaseAudioContext, so the same graph renders offline for listening tests.
 // The page wiring (sound switch, hover, leaving) is in main.js.
-import { CaseAudio } from "../undeveloped/audio.js";
-import { CaseMusic } from "../undeveloped/music.js";
+import { UndevelopedAudio } from "../undeveloped/audio.js";
+import { UndevelopedMusic } from "../undeveloped/music.js";
 
 const MASTER = 0.75;
 const RAMP = 0.8; // crossfade time, seconds
@@ -201,10 +201,10 @@ export class MenuAudio {
   // -------------------------------------------------------------------------------------- day
   buildDay() {
     const trim = this.gain(DAY_TRIM); trim.connect(this.day);
-    this.caseAudio = new CaseAudio();
-    this.caseAudio.start({ ctx: this.ctx, output: trim });
-    this.caseAudio.nextBird = 1.5;
-    this.music = new CaseMusic(this.caseAudio);
+    this.dayAudio = new UndevelopedAudio();
+    this.dayAudio.start({ ctx: this.ctx, output: trim });
+    this.dayAudio.nextBird = 1.5;
+    this.music = new UndevelopedMusic(this.dayAudio);
     this.music.enabled = true; // the menu has its own sound switch; the game's music setting is its own
     this.music.start({ manual: true, delay: 1.2 });
     // the Undeveloped sting borrows the score's harp
@@ -217,7 +217,7 @@ export class MenuAudio {
   // ------------------------------------------------------------------------------------ state
   // call ~10x a second while running: random night events, birds, the score's scheduler
   tick(dt) {
-    this.caseAudio.update(dt);
+    this.dayAudio.update(dt);
     this.music.tick();
     this.nextEvent -= dt;
     if (this.nextEvent <= 0) { this.nightEvent(); this.nextEvent = rand(7, 15); }

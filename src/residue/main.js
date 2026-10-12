@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { World } from "../shared/world.js";
-import { Audio } from "./audio.js";
+import { ResidueAudio } from "./audio.js";
 import { Player } from "../shared/player.js";
 import { SceneFX, U, installShading } from "./lighting.js";
 import { Entity } from "./entity.js";
 import * as STORY from "./story.js";
 import * as BENCH from "./bench.js";
-import { RENDER, COLOUR_MODES } from "../shared/render-config.js";
+import { RENDER } from "../shared/render-config.js";
 import { BOUNDARIES, UPPER_FLOORS } from "../shared/scan.js";
 import { buildEdgeField } from "../shared/edge-field.js";
 import { Camcorder } from "./camcorder.js";
@@ -34,9 +34,6 @@ const camcorder = new Camcorder(renderer, camera, 72);
 try { if (localStorage.getItem("residue.camcorder") === "off") camcorder.setOn(false); } catch {}
 if (params.has("clean")) camcorder.setOn(false);
 
-// colour detail: full spherical harmonics (glossy steel, view-dependent colour); ?sh=1 is a
-// lighter developer fallback
-const colourMode = params.get("sh") === "1" ? "fast" : "full";
 // full scan for dedicated GPUs, a streamed lighter one for integrated GPUs (see quality.js)
 const quality = chooseQuality(renderer, params);
 const Q = QUALITY[quality];
@@ -45,7 +42,7 @@ bindQualityButtons(quality);
 
 const spark = new SparkRenderer({
   renderer,
-  lodSplatScale: Number(params.get("detail")) || Q.lodSplatScale || COLOUR_MODES[colourMode].lodSplatScale,
+  lodSplatScale: Number(params.get("detail")) || Q.lodSplatScale || 1.0,
   behindFoveate: RENDER.behindFoveate,
   coneFoveate: RENDER.coneFoveate,
   coneFov0: RENDER.coneFov0,
@@ -83,7 +80,7 @@ STORY.INTRO.forEach((t, i) => {
 });
 
 // ---------------------------------------------------------------------------- loading
-const audio = new Audio();
+const audio = new ResidueAudio();
 let world, player, fx, entity, sanatorium;
 
 async function load() {
@@ -106,7 +103,7 @@ async function load() {
   });
   // the capture is y-down; flip 180deg about X
   sanatorium.quaternion.set(1, 0, 0, 0);
-  sanatorium.maxSh = Math.min(Q.maxSh, COLOUR_MODES[colourMode].maxSh);
+  sanatorium.maxSh = Q.maxSh;
   scene.add(sanatorium);
 
   fx = new SceneFX(sanatorium);
@@ -167,7 +164,6 @@ function setupBench() {
     },
     compare: BENCH.compare,
     views: BENCH.VIEWS,
-    setBox: (i, e) => fx.setBox(i, e),
     // render one view in the game's lighting (lamp on) and keep it on screen for a screenshot
     async show(cfg, i, settleMs = 5000, unlit = false) {
       BENCH.applyConfig(ctx, cfg);
@@ -242,7 +238,6 @@ const state = {
   glitch: 0,
   nextEvent: 8,
   checkpoint: null,
-  hint: "",
 };
 
 let exposures = [];
@@ -302,7 +297,7 @@ function setFrozen(on) {
   $("frozen").style.opacity = 1;
   clearTimeout(frozenLabelTimer);
   if (on) {
-    console.log(`[freeze] pos ${player.pos.toArray().map((v) => v.toFixed(2)).join(", ")} yaw ${player.yaw.toFixed(2)} pitch ${player.pitch.toFixed(2)} colour ${colourMode} detail ${spark.lodSplatScale.toFixed(2)}`);
+    console.log(`[freeze] pos ${player.pos.toArray().map((v) => v.toFixed(2)).join(", ")} yaw ${player.yaw.toFixed(2)} pitch ${player.pitch.toFixed(2)} detail ${spark.lodSplatScale.toFixed(2)}`);
     frozenLabelTimer = setTimeout(() => ($("frozen").style.opacity = 0), 1200); // gone before the screenshot
     document.exitPointerLock?.();
     if (audio.ctx) audio.ctx.suspend();
@@ -741,10 +736,10 @@ function renderFrame() {
 }
 
 const clock = new THREE.Clock();
-// adaptive detail: nudge the LoD splat budget to hold ~55fps (unless ?detail= was given)
-// Calibrates for the first ~20s of play, then locks so detail doesn't visibly shift while
-// you play; afterwards it only steps down if frame rate collapses.
-const adaptive = { on: !params.has("detail"), acc: 0, frames: 0, played: 0, grow: false, cap: Q.lodCap || COLOUR_MODES[colourMode].lodSplatScale };
+// adaptive detail: step the LoD splat budget down while the frame rate is low (unless ?detail=
+// was given). Stricter for the first ~20s of play, then only if the frame rate collapses, so
+// detail doesn't visibly shift while you play. (It only matters for the streamed lite scene.)
+const adaptive = { on: !params.has("detail"), acc: 0, frames: 0, played: 0 };
 function adapt(rawDt) {
   if (!adaptive.on || !state.started || state.paused) return;
   adaptive.played += rawDt;
@@ -756,12 +751,7 @@ function adapt(rawDt) {
   adaptive.acc = 0;
   adaptive.frames = 0;
   const calibrating = adaptive.played < 25;
-  if (fps < (calibrating ? 50 : 38)) {
-    spark.lodSplatScale = Math.max(0.3, spark.lodSplatScale * 0.85);
-    adaptive.grow = false;
-  } else if (calibrating && adaptive.grow && fps > 58.5) {
-    spark.lodSplatScale = Math.min(adaptive.cap, spark.lodSplatScale * 1.1);
-  }
+  if (fps < (calibrating ? 50 : 38)) spark.lodSplatScale = Math.max(0.3, spark.lodSplatScale * 0.85);
 }
 renderer.setAnimationLoop(() => {
   const rawDt = clock.getDelta();

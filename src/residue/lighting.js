@@ -20,15 +20,6 @@ export const U = {
   glitch: dyno.dynoFloat(0),
   death: dyno.dynoFloat(0),
   ending: dyno.dynoFloat(0),
-  // edit boxes: select the splats inside an axis-aligned box and move/rotate/scale/tint/delete
-  // them. min.w = mode (0 off, 1 transform, 2 delete), max.w = yaw (rad), off.xyz = translation,
-  // off.w = scale, tint = rgb multiply + opacity multiply. Pivot: centre of the box's floor.
-  box: [0, 1, 2, 3].map(() => ({
-    min: dyno.dynoVec4(new THREE.Vector4(0, 0, 0, 0)),
-    max: dyno.dynoVec4(new THREE.Vector4(0, 0, 0, 0)),
-    off: dyno.dynoVec4(new THREE.Vector4(0, 0, 0, 1)),
-    tint: dyno.dynoVec4(new THREE.Vector4(1, 1, 1, 1)),
-  })),
   exitPos: dyno.dynoVec4(new THREE.Vector4(0, -100, 0, 0)),
   ex: [0, 1, 2, 3, 4, 5].map(() => dyno.dynoVec4(new THREE.Vector4(0, -100, 0, 2))),
   // benchmark: show raw captured colour (vertex-shader side, see VSU.rsUnlit)
@@ -320,7 +311,6 @@ function makeSceneModifier() {
       inTypes: {
         gsplat: dyno.Gsplat, t: "float", entPos: "vec3", entPow: "float", glitch: "float", death: "float",
         ending: "float", exitPos: "vec4", e0: "vec4", e1: "vec4", e2: "vec4", e3: "vec4", e4: "vec4", e5: "vec4",
-        ...Object.fromEntries([0, 1, 2, 3].flatMap((i) => [[`b${i}n`, "vec4"], [`b${i}x`, "vec4"], [`b${i}o`, "vec4"], [`b${i}t`, "vec4"]])),
       },
       outTypes: { gsplat: dyno.Gsplat },
       globals: () => [dyno.defineGsplat, dyno.unindent(/* glsl */ `
@@ -329,21 +319,6 @@ function makeSceneModifier() {
           p = fract(p * vec3(0.1031, 0.1030, 0.0973));
           p += dot(p, p.yxz + 33.33);
           return fract((p.xxy + p.yxx) * p.zyx);
-        }
-        void rgEdit(inout vec3 c, inout vec4 q, inout vec3 scl, inout vec3 col, inout float alpha, inout bool keep,
-                    vec4 mn, vec4 mx, vec4 off, vec4 tint) {
-          if (mn.w < 0.5) return;
-          if (any(lessThan(c, mn.xyz)) || any(greaterThan(c, mx.xyz))) return;
-          if (mn.w > 1.5) { keep = false; return; }
-          vec3 ctr = vec3(0.5 * (mn.x + mx.x), mn.y, 0.5 * (mn.z + mx.z));
-          vec3 p = c - ctr;
-          float cy = cos(mx.w), sy = sin(mx.w);
-          p = vec3(cy * p.x + sy * p.z, p.y, -sy * p.x + cy * p.z) * off.w;
-          c = ctr + p + off.xyz;
-          q = quatQuat(vec4(0.0, sin(0.5 * mx.w), 0.0, cos(0.5 * mx.w)), q);
-          scl *= off.w;
-          col *= tint.rgb;
-          alpha *= tint.a;
         }
       `)],
       statements: ({ inputs: I, outputs: O }) => dyno.unindentLines(/* glsl */ `
@@ -354,13 +329,6 @@ function makeSceneModifier() {
           vec3 scl = ${I.gsplat}.scales;
           float alpha = ${I.gsplat}.rgba.a;
           float h = rgHash13(c * 53.0);
-          vec4 q = ${I.gsplat}.quaternion;
-          bool keep = true;
-          rgEdit(c, q, scl, col, alpha, keep, ${I.b0n}, ${I.b0x}, ${I.b0o}, ${I.b0t});
-          rgEdit(c, q, scl, col, alpha, keep, ${I.b1n}, ${I.b1x}, ${I.b1o}, ${I.b1t});
-          rgEdit(c, q, scl, col, alpha, keep, ${I.b2n}, ${I.b2x}, ${I.b2o}, ${I.b2t});
-          rgEdit(c, q, scl, col, alpha, keep, ${I.b3n}, ${I.b3x}, ${I.b3o}, ${I.b3t});
-          if (!keep) { ${O.gsplat}.flags = 0u; }
 
           // decoherence: near the entity, during glitches, and when caught
           float de = ${I.entPow} * (1.0 - smoothstep(0.6, 5.0, distance(c, ${I.entPos})));
@@ -374,7 +342,6 @@ function makeSceneModifier() {
             col = mix(col, vec3(lum) * vec3(0.9, 0.85, 0.85), clamp(de, 0.0, 1.0));
             alpha *= 1.0 - clamp(de * 0.4, 0.0, 0.8) * step(0.5, h);
           }
-
 
           // the lounge window comes apart, splat by splat
           if (${I.exitPos}.w > 0.0) {
@@ -394,7 +361,6 @@ function makeSceneModifier() {
           }
 
           ${O.gsplat}.center = c;
-          ${O.gsplat}.quaternion = q;
           ${O.gsplat}.scales = scl;
           ${O.gsplat}.rgba = vec4(col, alpha);
         }
@@ -404,7 +370,6 @@ function makeSceneModifier() {
       gsplat: fx.apply({
         gsplat, t: U.time, entPos: U.entityPos, entPow: U.entityPower, glitch: U.glitch, death: U.death,
         ending: U.ending, exitPos: U.exitPos, e0: U.ex[0], e1: U.ex[1], e2: U.ex[2], e3: U.ex[3], e4: U.ex[4], e5: U.ex[5],
-        ...Object.fromEntries(U.box.flatMap((b, i) => [[`b${i}n`, b.min], [`b${i}x`, b.max], [`b${i}o`, b.off], [`b${i}t`, b.tint]])),
       }).gsplat,
     };
   });
@@ -455,18 +420,6 @@ export class SceneFX {
     this.exposureState[i] = 2;
   }
 
-  // edit box i: { min:[x,y,z], max:[x,y,z], mode:'move'|'delete'|'off', yaw, offset:[x,y,z], scale, tint:[r,g,b,a] }
-  setBox(i, e) {
-    const b = U.box[i];
-    const mode = { off: 0, move: 1, delete: 2 }[e?.mode ?? "off"];
-    if (!e || !mode) { b.min.value.w = 0; this.boxVersion = (this.boxVersion ?? 0) + 1; return; }
-    b.min.value.set(...e.min, mode);
-    b.max.value.set(...e.max, e.yaw ?? 0);
-    b.off.value.set(...(e.offset ?? [0, 0, 0]), e.scale ?? 1);
-    b.tint.value.set(...(e.tint ?? [1, 1, 1, 1]));
-    this.boxVersion = (this.boxVersion ?? 0) + 1;
-  }
-
   update(s) {
     const { camera, dt } = s;
     camera.updateMatrixWorld();
@@ -504,7 +457,6 @@ export class SceneFX {
     if (Math.abs(target - this.exitGlow) > 0.002) animating = true;
     U.exitPos.value.w = VSU.rsExit.value.w = this.exitGlow;
 
-    if (this.boxVersion !== this.seenBoxVersion) { this.seenBoxVersion = this.boxVersion; animating = true; }
     this.active = animating || U.entityPower.value > 0.003 || U.glitch.value > 0 || U.death.value > 0 || U.ending.value > 0;
   }
 }

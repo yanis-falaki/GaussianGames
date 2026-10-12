@@ -14,13 +14,12 @@ function installExtent(spark, alphaCut, haze) {
   spark.material.uniforms.cfAlphaCut = { value: alphaCut };
   spark.material.uniforms.cfHaze = { value: haze.color };
   spark.material.uniforms.cfFog = { value: haze.fog }; // start, end, max amount
-  // living boundary (see boundary.js): splats beyond walkable space ripple and dissolve
+  // living boundary (see shared/edge-field.js): splats beyond walkable space ripple and dissolve
   const u = spark.material.uniforms;
   u.cfEdgeTex = { value: new THREE.Data3DTexture(new Uint8Array([0]), 1, 1, 1) };
   u.cfEdgeOrigin = { value: new THREE.Vector3() };
   u.cfEdgeSize = { value: new THREE.Vector3(1, 1, 1) };
   u.cfEdgeOn = { value: 0 };
-  u.cfFx = { value: 1 }; // debug: 0 disables the boundary + near-smear effects
   u.cfTime = { value: 0 };
   u.cfPlayer = { value: new THREE.Vector3(0, -100, 0) };
   // boundary zones: splats inside dissolve into the haze (a wall of light where the scan fails)
@@ -37,7 +36,7 @@ uniform vec3 cfFog;
 precision highp sampler3D;
 uniform sampler3D cfEdgeTex;
 uniform vec3 cfEdgeOrigin, cfEdgeSize, cfPlayer;
-uniform float cfEdgeOn, cfTime, cfFx;
+uniform float cfEdgeOn, cfTime;
 uniform vec3 cfBoxMin[8], cfBoxMax[8];
 void main() {
     float cfEdge = 0.0, cfNear = 0.0;`);
@@ -47,12 +46,12 @@ void main() {
   patch("    vRgba = rgba;", `    if (cfEdgeOn > 0.5) {
       vec3 cfWorld = center + cameraPosition + transpose(mat3(viewMatrix)) * renderToViewPos;
       float cfD = texture(cfEdgeTex, (cfWorld - cfEdgeOrigin) / cfEdgeSize).r * 5.1;
-      cfEdge = smoothstep(0.9, 2.6, cfD) * cfFx;
+      cfEdge = smoothstep(0.9, 2.6, cfD);
       for (int i = 0; i < 8; i++) {
         // signed depth inside box i (negative outside): full dissolve 0.8m in, a glow just outside
         vec3 lo = cfWorld - cfBoxMin[i], hi = cfBoxMax[i] - cfWorld;
         float depth = min(min(min(lo.x, hi.x), min(lo.y, hi.y)), min(lo.z, hi.z));
-        cfEdge = max(cfEdge, smoothstep(-0.7, 0.8, depth) * cfFx);
+        cfEdge = max(cfEdge, smoothstep(-0.7, 0.8, depth));
       }
       cfNear = 1.0 - smoothstep(1.0, 6.0, distance(cfWorld, cfPlayer));
       float cfAmp = cfEdge * (0.04 + 0.1 * cfNear);
@@ -71,7 +70,7 @@ void main() {
       float cfMaxS = max(max(scales.x, scales.y), scales.z);
       // judged by apparent (angular) size: a splat filling a big part of the view from up close
       float cfAng = cfMaxS / max(cfDist, 0.05);
-      float cfBig = smoothstep(0.07, 0.25, cfAng) * (1.0 - smoothstep(1.5, 4.0, cfDist)) * cfFx;
+      float cfBig = smoothstep(0.07, 0.25, cfAng) * (1.0 - smoothstep(1.5, 4.0, cfDist));
       rgba.rgb = mix(rgba.rgb, min(cfHaze * (1.0 + 0.1 * cfPulse * cfEdge), vec3(1.0)), max(cfH, cfBig * 0.6));
       rgba.a *= max(0.0, 1.0 - 0.55 * cfEdge - 0.9 * cfBig);
     }
