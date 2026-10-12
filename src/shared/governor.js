@@ -5,7 +5,8 @@
 // which shows headroom as well as overload, so it can step up as well as down. Elsewhere it
 // watches frame intervals: it steps down when frames are missed, and only now and then probes a
 // level up, backing off for longer each time a probe fails.
-// Changes are rare and spaced out: a level holds for a while, and the steps are small, so detail
+// Changes are rare and spaced out: a level holds for a while, a deficit has to last about a
+// second, stalls that aren't about GPU load don't count, and the steps are small, so detail
 // doesn't visibly pump. The chosen level is remembered per quality tier for the next visit.
 //
 // Developer switches: ?res=0.7 fixes the render scale, ?detail=1.2 fixes the splat budget,
@@ -27,7 +28,7 @@ export const LADDER = [
 const KEY = "gaussian-games.level.";
 const TARGET_MS = 1000 / 60;
 const WINDOW = 30;          // frames per decision window (~0.5 s)
-const HOLD_MS = 900;        // minimum time between changes
+const HOLD_MS = 1500;       // minimum time between changes
 const SETTLE_FRAMES = 12;   // frames ignored after a change (resize, LoD re-selection)
 
 export class Governor {
@@ -113,7 +114,7 @@ export class Governor {
     this.lastChange = performance.now();
     this.settle = SETTLE_FRAMES;
     this.samples.length = this.intervals.length = 0;
-    this.goodWindows = 0;
+    this.goodWindows = this.overWindows = 0;
     // Not now: decisions are made at the end of a frame, after it was drawn, and resizing the
     // canvas clears it, so the browser would show that frame black. The next begin() applies it,
     // before anything is drawn into the new buffer.
@@ -157,46 +158,50 @@ export class Governor {
     if (this.enabled && this.active) this.decide(now);
   }
 
-  // Frame intervals are the ground truth: a level is too high when frames are missed (shown for
-  // longer than ~1.5 refreshes at 60 Hz). The GPU timer, where there is one, adds two things: it
-  // shows clear headroom (so a step up needn't be a blind probe), and it tells a CPU-bound stall
-  // (which fewer pixels wouldn't fix) from a GPU-bound one. (It can't be the trigger itself: it
-  // counts GPU idle bubbles inside the frame too, so it overestimates under load.)
+  // A level is too high only when frames are being missed *and* it's the GPU's doing, for a
+  // sustained stretch (about a second). With a GPU timer that means the frames' GPU time is
+  // near the budget: a missed frame while the GPU was mostly idle is a stall that fewer pixels
+  // wouldn't fix (streamed chunks being uploaded, a regeneration or sort spike, a GC). Without
+  // one, missed frames count only while nothing is streaming in.
+  // Stepping up: with a GPU timer, after a couple of seconds of clear headroom (the next level up
+  // costs at most ~1.35x, so it still fits: no oscillation). Without one, a careful probe after a
+  // few calm seconds, backing off for longer each time a probe fails.
   decide(now) {
     if (this.intervals.length < WINDOW) return;
     const iv = this.intervals.splice(0);
     const missed = iv.filter((x) => x > 24).length / iv.length;
-    const meanIv = iv.reduce((a, b) => a + b, 0) / iv.length;
-    let gpuP90 = null;
+    let gpuP75 = null, gpuP90 = null;
     if (this.timer && this.samples.length >= WINDOW / 2) {
       const g = this.samples.splice(0).sort((a, b) => a - b);
+      gpuP75 = g[Math.floor(g.length * 0.75)];
       gpuP90 = g[Math.floor(g.length * 0.9)];
     } else this.samples.length = 0;
-    if (this.debug) this.why = `frames ${meanIv.toFixed(1)}ms missed ${(missed * 100).toFixed(0)}%` + (gpuP90 !== null ? ` gpu p90 ${gpuP90.toFixed(1)}ms` : "");
-    const over = missed > 0.06; // (not the mean: one long stall, a GC or an upload, is not a GPU budget problem)
-    // stalls that fewer pixels or splats wouldn't fix: a CPU-bound frame (the GPU was mostly idle),
-    // or streamed chunks being uploaded (without a GPU timer, a few missed frames then don't count)
-    const streaming = now - this.streamedAt < 1000;
-    const cpuBound = gpuP90 !== null ? gpuP90 < TARGET_MS * 0.4 : streaming && missed < 0.3;
-    const calm = missed < 0.02 && meanIv < 17.6;
-    const headroom = calm && gpuP90 !== null && gpuP90 < TARGET_MS * 0.5;
+    const timed = gpuP75 !== null;
+    const streaming = now - this.streamedAt < 1500;
+    if (this.debug) this.why = `missed ${(missed * 100).toFixed(0)}%` + (timed ? ` gpu p75 ${gpuP75.toFixed(1)} p90 ${gpuP90.toFixed(1)}ms` : streaming ? " streaming" : "");
+    const over = timed
+      ? missed > 0.05 && gpuP75 > TARGET_MS * 0.7
+      : missed > 0.08 && !streaming;
+    const severe = over && missed > 0.3 && (!timed || gpuP75 > TARGET_MS);
+    const calm = missed < 0.02;
+    const headroom = calm && timed && gpuP90 < TARGET_MS * 0.5;
+    this.overWindows = over ? (this.overWindows ?? 0) + 1 : 0;
+    this.goodWindows = calm && (headroom || !timed) ? this.goodWindows + 1 : 0;
     if (now - this.lastChange < HOLD_MS) return;
-    if (over && !cpuBound) {
-      // a failed probe: don't try that level again for a while (longer each time)
-      if (this.lastProbe && this.lastProbe.level === this.level && now - this.lastProbe.at < 4000) {
+    if (this.overWindows >= 2 || severe) {
+      // a failed step up: don't try that level again for a while (longer each time)
+      if (this.lastProbe && this.lastProbe.level === this.level && now - this.lastProbe.at < 5000) {
         const f = Math.min(6, ++this.failures[this.level]);
         this.cooldown[this.level] = now + 15000 * 2 ** f;
       }
       this.lastProbe = null;
+      this.overWindows = this.goodWindows = 0;
+      this.setLevel(this.level + (severe ? 2 : 1), this.why ?? "over budget");
+    } else if (this.level > 0 && this.goodWindows >= (timed ? 4 : 10) && now >= this.cooldown[this.level - 1]) {
+      this.lastProbe = { level: this.level - 1, at: now };
       this.goodWindows = 0;
-      this.setLevel(this.level + (missed > 0.4 ? 2 : 1), this.why ?? "over budget");
-    } else if (calm && this.level > 0) {
-      // clear GPU headroom: step up after a moment. Otherwise probe after a few calm seconds.
-      if (++this.goodWindows >= (headroom ? 3 : 8) && now >= this.cooldown[this.level - 1]) {
-        this.lastProbe = { level: this.level - 1, at: now };
-        this.setLevel(this.level - 1, `headroom: ${this.why ?? ""}`);
-      }
-    } else this.goodWindows = 0;
+      this.setLevel(this.level - 1, `headroom: ${this.why ?? ""}`);
+    }
   }
 
   stats() {

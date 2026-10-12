@@ -13,7 +13,10 @@ const SEG = PATH.slice(1).map((b, i) => Math.hypot(b[0] - PATH[i][0], b[2] - PAT
 
 // the pose at time t (s) along the path: walking at `speed` m/s, looking +-50 degrees
 export function poseAt(t, speed = 2.0) {
-  let dist = t * speed, i = 0;
+  // back and forth along the path, for walks longer than one pass (~22 s)
+  const total = SEG.reduce((a, b) => a + b, 0);
+  let dist = (t * speed) % (2 * total), i = 0;
+  if (dist > total) dist = 2 * total - dist;
   while (i < SEG.length - 1 && dist > SEG[i]) { dist -= SEG[i]; i++; }
   const a = PATH[i], b = PATH[i + 1], f = Math.min(1, dist / SEG[i]);
   const look = Math.sin(t * 1.7) * 0.87;
@@ -35,7 +38,7 @@ export async function walk({ renderer, pose, frame, seconds = 20, warmup = 3, sp
   const gl = renderer.getContext();
   const tq = governor?.timer ? null : gl.getExtension("EXT_disjoint_timer_query_webgl2");
   const frames = [], cpu = [], gpu = [], gpuRegen = [], gpuPlain = [], pending = [], counters = {};
-  let longTasks = 0, black = 0, levelChanges = 0, blackAtChange = 0;
+  let longTasks = 0, black = 0, levelChanges = 0, blackAtChange = 0, lastLevel;
   const row = new Uint8Array(4 * 8192);
   const isBlack = () => {
     const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
@@ -93,8 +96,8 @@ export async function walk({ renderer, pose, frame, seconds = 20, warmup = 3, sp
     } else frame();
     if (measuring) cpu.push(performance.now() - c0);
     if (measuring && checkBlack) {
-      const lv = governor?.level, changed = governor && lv !== walk.lastLevel;
-      walk.lastLevel = lv;
+      const lv = governor?.level, changed = governor && lastLevel !== undefined && lv !== lastLevel;
+      lastLevel = lv;
       if (changed) levelChanges++;
       if (isBlack()) { black++; if (changed) blackAtChange++; }
     }
