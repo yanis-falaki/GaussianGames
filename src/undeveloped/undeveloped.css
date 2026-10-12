@@ -161,3 +161,57 @@ button { font: inherit; cursor: pointer; }
 .ev-grid.picking .card.unfit { opacity: .35; outline: 0; }
 .picker small { font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #8b8170; padding: 6px 12px 4px; }
 #doc.over-notebook { z-index: 30; cursor: pointer; }
+
+/* ---------- the opening: letterbox bars and three lines over a slow walk through the hall */
+#intro { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+#intro .bar { position: absolute; left: 0; right: 0; height: 11vh; background: #000; transition: transform 1.2s cubic-bezier(.5,0,.2,1); }
+#intro .bar.top { top: 0; transform: translateY(-100%); }
+#intro .bar.bottom { bottom: 0; transform: translateY(100%); }
+#intro.on .bar { transform: none; }
+#intro-line { position: absolute; left: 50%; bottom: calc(11vh + 7vh); transform: translate(-50%, 8px); width: min(640px, 86vw); text-align: center;
+  opacity: 0; transition: opacity 1.1s ease, transform 1.4s ease; text-shadow: 0 1px 12px rgba(0,0,0,.7), 0 0 2px rgba(0,0,0,.6); }
+#intro-line.on { opacity: 1; transform: translate(-50%, 0); }
+#intro-line small { display: block; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .22em; text-transform: uppercase; color: #ffd9a0; margin-bottom: 10px; }
+#intro-line p { margin: 0; font: 400 clamp(18px, 2.3vw, 25px)/1.45 "IBM Plex Sans", sans-serif; color: #fbf6ea; }
+.intro-skip { position: absolute; right: 22px; bottom: calc(5.5vh - 7px); font: 11px "IBM Plex Mono", monospace; letter-spacing: .12em; color: rgba(255,255,255,.45); opacity: 0; transition: opacity 1s 2s; }
+#intro.on .intro-skip { opacity: 1; }
+
+/* a chapter opening: its title, question and the story so far */
+#chapter-card { position: fixed; left: 50%; top: 13vh; transform: translate(-50%, -6px); width: min(560px, 86vw); text-align: center; pointer-events: none; padding: 26px 40px;
+  background: radial-gradient(closest-side, rgba(12,10,8,.5), rgba(12,10,8,.28) 60%, transparent);
+  opacity: 0; transition: opacity 1s ease, transform 1.2s ease; text-shadow: 0 1px 10px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.6); z-index: 15; }
+#chapter-card.on { opacity: 1; transform: translate(-50%, 0); }
+#chapter-card small { display: block; font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .22em; text-transform: uppercase; color: #ffd9a0; }
+#chapter-card h2 { margin: 10px 0 6px; font: 600 clamp(20px, 2.6vw, 28px)/1.3 "IBM Plex Sans", sans-serif; color: #fff; }
+#chapter-card p { margin: 0; font: 500 22px/1.3 "Caveat", cursive; color: #f3ead8; }
+#hud-chapter { color: rgba(255,255,255,.7); max-width: 60vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- the ending: the light washes out, then the case closes */
+#ending { background: #fbf6ea; opacity: 0; transition: opacity 2.2s ease; }
+#ending.on { opacity: 1; background: rgba(10,9,8,.8); transition: opacity 2.2s ease, background 3s ease 2.2s; }
+#ending .paper { opacity: 0; transform: translateY(14px); transition: opacity 1.6s ease 2.6s, transform 1.6s ease 2.6s; }
+#ending.on .paper { opacity: 1; transform: none; }
+#ending .paper > p { opacity: 0; transition: opacity 1.4s ease; }
+#ending.on .paper > p:nth-of-type(1) { opacity: 1; transition-delay: 3.4s; }
+#ending.on .paper > p:nth-of-type(2) { opacity: 1; transition-delay: 5.2s; }
+#ending.on .paper > p:nth-of-type(3) { opacity: 1; transition-delay: 7s; }
+#ending.on .paper > p:nth-of-type(n+4) { opacity: 1; transition-delay: 9.5s; }
+.postcard { position: relative; margin: 22px auto 8px; width: min(380px, 100%); background: #fffdf7; padding: 18px 22px 14px 74px; box-shadow: 0 6px 22px rgba(0,0,0,.18), inset 0 0 0 1px #e5dcc8;
+  transform: rotate(-1.6deg); opacity: 0; transition: opacity 1.6s ease 8.4s; }
+#ending.on .postcard { opacity: 1; }
+.postcard .heart { position: absolute; left: 20px; top: 12px; font: 500 46px/1 "Caveat", cursive; color: #f0287e; text-shadow: 0 0 6px rgba(240,40,126,.35); }
+.postcard p.hand { margin: 0; font-size: 23px; }
+.postcard small { margin-top: 8px !important; }
+.sheet-title { margin-top: 26px !important; }
+.end-photos figure { margin: 0; }
+.end-photos figcaption { margin-top: 9px; font: 11px/1.3 "IBM Plex Mono", monospace; color: #6d6455; }
+.end-photos img { box-shadow: 0 0 0 5px #fff, 0 3px 10px rgba(0,0,0,.3); }
+.ghostlink { align-self: center; color: var(--ink); font-size: 14px; text-decoration: none; padding: 12px 10px; }
+.ghostlink:hover { text-decoration: underline; }
+.end-photos figure:nth-child(2n) img { transform: rotate(1.2deg); }
+#ending .sheet-title, #ending .end-photos, #ending .row { opacity: 0; transition: opacity 1.6s ease 10s; }
+#ending.on .sheet-title, #ending.on .end-photos, #ending.on .row { opacity: 1; }
+#intro::before { content: ""; position: absolute; left: 0; right: 0; bottom: 11vh; height: 34vh; background: linear-gradient(transparent, rgba(0,0,0,.42)); opacity: 0; transition: opacity 1.2s; }
+#intro.on::before { opacity: 1; }
+/* the last photo's print steps aside for the notebook, documents and the ending */
+body:has(#notebook:not([hidden])) #print, body:has(#doc:not([hidden])) #print, body:has(#ending:not([hidden])) #print { opacity: 0; }

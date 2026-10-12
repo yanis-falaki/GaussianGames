@@ -116,7 +116,7 @@ void main() {
         float g;
         if (hB.w < 0.0) {
           // framed: a faint contour that breathes
-          g = inside * (0.2 + 0.45 * rim) * (0.75 + 0.25 * sin(cfTime * 4.0));
+          g = inside * (0.28 + 0.45 * rim) * (0.75 + 0.25 * sin(cfTime * 4.0));
         } else {
           // photographed: the object floods with light, then a band of it sweeps up and away
           float p = hB.w;

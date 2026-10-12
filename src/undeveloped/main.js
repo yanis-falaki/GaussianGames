@@ -106,16 +106,96 @@ $("start").onclick = () => {
   audio.start();
   music.start();
   state.started = true;
+  state.t0 = performance.now();
   lock();
-  // a smooth way in: the file lifts away, the view pulls into focus and develops
+  let seen = false;
+  try { seen = localStorage.getItem(INTRO_KEY) === "seen"; } catch {}
+  if (seen) return enter();
+  // the first time: the opening, over a slow walk through the hall
+  $("title").classList.add("leaving");
+  setTimeout(() => { $("title").hidden = true; $("title").classList.remove("leaving"); }, 1400);
+  startOpening();
+};
+
+// a smooth way in: the file (or the opening) lifts away, the view pulls into focus and develops
+function enter() {
   const dev = $("develop-in");
   dev.classList.add("on");
   requestAnimationFrame(() => requestAnimationFrame(() => { dev.classList.add("fade"); }));
-  $("title").classList.add("leaving");
+  if (!$("title").hidden) $("title").classList.add("leaving");
   setTimeout(() => { $("title").hidden = true; $("title").classList.remove("leaving"); dev.className = ""; }, 3100);
   setTimeout(() => { $("hud").style.opacity = 1; }, 1200);
-  setTimeout(() => toast("Look around. <b>Glinting dust</b> marks things worth a closer look.", 6000), 2200);
-};
+  setTimeout(() => chapterCard(0), 1800);
+  setTimeout(() => toast("Look around. <b>Glinting dust</b> marks things worth a closer look.", 6000), 6800);
+}
+
+// ---------------------------------------------------------------------------- the opening
+// Three lines over a slow camera move through the dining hall, ending where you start. Shown
+// once; click, Space, Enter or Esc skips it.
+const INTRO_KEY = "undeveloped.intro";
+const opening = { t: 0, line: -1 };
+function startOpening() {
+  state.intro = true;
+  player.enabled = false;
+  const P = CASE.OPENING.path;
+  opening.curve = new THREE.CatmullRomCurve3(P.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, "centripetal");
+  opening.t = 0; opening.line = -1;
+  $("intro").hidden = false;
+  requestAnimationFrame(() => $("intro").classList.add("on"));
+}
+const smooth = (t) => t * t * (3 - 2 * t);
+function updateOpening(dt) {
+  const O = CASE.OPENING, P = O.path;
+  opening.t = Math.min(1, opening.t + dt / O.seconds);
+  const u = smooth(opening.t);
+  const p = opening.curve.getPoint(u);
+  // yaw / pitch between the keys (the curve's parameter is close enough to the key spacing)
+  const f = u * (P.length - 1), i = Math.min(P.length - 2, Math.floor(f)), k = smooth(f - i);
+  const yaw = P[i][3] + (P[i + 1][3] - P[i][3]) * k, pitch = P[i][4] + (P[i + 1][4] - P[i][4]) * k;
+  camera.position.set(p.x, p.y + 1.62, p.z);
+  camera.rotation.set(pitch, yaw, 0, "YXZ");
+  // the lines: each holds for a third of the walk, fading in and out
+  const n = O.lines.length, line = Math.min(n - 1, Math.floor(opening.t * n * 1.04));
+  if (line !== opening.line) {
+    opening.line = line;
+    const el = $("intro-line");
+    el.classList.remove("on");
+    setTimeout(() => {
+      $("intro-kicker").textContent = O.lines[line].kicker;
+      $("intro-text").textContent = O.lines[line].text;
+      el.classList.add("on");
+    }, line === 0 ? 900 : 700);
+  }
+  if (opening.t >= 1) endOpening();
+}
+function endOpening() {
+  if (!state.intro) return;
+  state.intro = false;
+  try { localStorage.setItem(INTRO_KEY, "seen"); } catch {}
+  player.spawn(CASE.SPAWN.x, CASE.SPAWN.y, CASE.SPAWN.z, CASE.SPAWN.yaw);
+  player.enabled = document.pointerLockElement === canvas;
+  $("intro").classList.remove("on");
+  setTimeout(() => ($("intro").hidden = true), 900);
+  enter();
+}
+addEventListener("keydown", (e) => { if (state.intro && ["Space", "Enter", "Escape", "KeyM"].includes(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); endOpening(); } }, true);
+addEventListener("mousedown", (e) => { if (state.intro) { e.stopImmediatePropagation(); if (opening.t > 0.02) endOpening(); } }, true);
+
+// ---------------------------------------------------------------------------- chapter cards
+// When a chapter opens (and at the start): its title, its question and the story so far, for a
+// few seconds. Waits until the notebook is closed.
+let cardTimer = 0;
+function chapterCard(ci) {
+  if (state.ui) { state.pendingCard = ci; return; }
+  state.pendingCard = null;
+  const ch = CASE.CHAPTERS[ci], el = $("chapter-card");
+  el.innerHTML = `<small>${esc(ch.title)}</small><h2>${esc(ch.question)}</h2><p>${esc(ch.intro)}</p>`;
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add("on"));
+  clearTimeout(cardTimer);
+  cardTimer = setTimeout(() => { el.classList.remove("on"); setTimeout(() => (el.hidden = true), 900); }, 6500);
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 $("resume").onclick = lock;
 canvas.addEventListener("click", () => {
   if (state.frozen) return setFrozen(false);
@@ -124,7 +204,7 @@ canvas.addEventListener("click", () => {
 document.addEventListener("pointerlockchange", () => {
   const locked = document.pointerLockElement === canvas;
   state.paused = !locked;
-  player.enabled = locked;
+  player.enabled = locked && !state.intro;
   if (!locked) { state.raised = false; player.keys = {}; }
   if (state.frozen) return;
   $("pause").hidden = locked || !!state.ui || !state.started;
@@ -137,7 +217,7 @@ canvas.addEventListener("mousedown", (e) => {
 });
 addEventListener("contextmenu", (e) => e.preventDefault());
 addEventListener("keydown", (e) => {
-  if (!state.started) return;
+  if (!state.started || state.intro) return;
   if (e.code === "Tab") { e.preventDefault(); if (notebook.cardOpen()) notebook.closeCard(); state.ui === "notebook" ? closeUI() : notebook.open(); return; }
   if (e.code === "KeyE" && !e.repeat) { state.ui === "doc" ? closeUI() : !state.ui && !state.paused && examine(); }
   if (DEBUG && e.code === "KeyP" && !e.repeat && !state.ui) setFrozen(!state.frozen); // freeze frame, for screenshots
@@ -162,6 +242,7 @@ function closeUI() {
   state.ui = null;
   lock();
   if (state.trailsPending) updateTrails();
+  if (state.pendingCard != null) setTimeout(() => chapterCard(state.pendingCard), 600);
 }
 
 function setRaised(on) {
@@ -318,20 +399,38 @@ function addEvidence(c, img) {
   updateTrails();
 }
 
-const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: () => { progress(); updateHud(); updateTrails(); }, onFinish: showEnding });
+const notebook = createNotebook({ state, audio, toast, setRaised, onSolved: (ci) => { progress(); updateHud(); updateTrails(); if (ci + 1 < CASE.CHAPTERS.length) state.pendingCard = ci + 1; }, onFinish: showEnding });
 
 // ---------------------------------------------------------------------------- the ending
+// The light washes out, then the case closes: what happened next, paragraph by paragraph, a
+// postcard, and your photographs as a contact sheet.
 function showEnding() {
-  const photos = [...state.evidence.values()].filter((e) => e.img).slice(0, 9);
-  $("end-body").innerHTML = CASE.ENDING + `<div class="end-photos">${photos.map((p) => `<img src="${p.img}">`).join("")}</div>
-    <div class="row"><button onclick="location.reload()">Start over</button></div>`;
+  // one print per photograph (a frame can hold several clues)
+  const photos = [];
+  for (const e of state.evidence.values()) {
+    if (!e.img) continue;
+    const same = photos.find((p) => p.img === e.img);
+    if (same) same.label += ` · ${e.label}`; else photos.push({ img: e.img, label: e.label });
+  }
+  const docs = [...state.evidence.values()].filter((e) => e.kind === "doc").length;
+  const mins = Math.max(1, Math.round((performance.now() - (state.t0 ?? performance.now())) / 60000));
+  $("end-body").innerHTML = CASE.ENDING + `
+    <div class="postcard"><span class="heart">&#9829;</span>${CASE.POSTCARD}<small>A week later, a postcard. No stamp, no address. Just a small pink heart.</small></div>
+    <h2 class="sheet-title">Her photographs of Haus Lindenhof were never posted. These are yours.</h2>
+    <div class="end-photos">${photos.map((p) => `<figure><img src="${p.img}" alt=""><figcaption>${esc(p.label)}</figcaption></figure>`).join("")}</div>
+    <p class="small">${photos.length} photograph${photos.length === 1 ? "" : "s"} · ${docs} document${docs === 1 ? "" : "s"} read · about ${mins} minute${mins === 1 ? "" : "s"} in the building</p>
+    <div class="row"><button onclick="location.reload()">Walk it again</button><a class="ghostlink" href="./">&larr; all games</a></div>`;
+  $("hud").style.opacity = 0;
   $("ending").hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => $("ending").classList.add("on")));
 }
 
 function updateHud() {
   const n = state.evidence.size;
   const solved = state.solved.filter(Boolean).length;
   $("hud-progress").textContent = `Evidence ${n} · Chapters solved ${solved} / ${CASE.CHAPTERS.length}`;
+  const ch = CASE.CHAPTERS[currentChapter()];
+  $("hud-chapter").textContent = solved === CASE.CHAPTERS.length ? "" : `${ch.title} · ${ch.question}`;
 }
 
 // ---------------------------------------------------------------------------- trails
@@ -374,7 +473,8 @@ function lostCue() {
     const where = dy > 1.5 ? "upstairs" : dy < -1.5 ? "downstairs" : Math.abs(a) < 35 ? "ahead of you" : Math.abs(a) > 125 ? "behind you" : a > 0 ? "to your right" : "to your left";
     const whose = { mara: "Her footprints", run: "Her footprints", man: "The boot prints", dog: "The paw prints" }[near.leg.def.walker];
     trails.pulse(5);
-    return toast(`${whose} go on from about ${Math.max(3, Math.round(Math.hypot(dx, dz)))} m ${where}.`, 5000);
+    const m = Math.max(3, Math.round(Math.hypot(dx, dz)));
+    return toast(Math.abs(dy) > 1.5 ? `${whose} go on ${where}.` : `${whose} are about ${m} m ${where}.`, 5000);
   }
   if (near) { trails.pulse(5); return toast("Look down: the footprints go on from here.", 4500); }
   const ch = CASE.CHAPTERS[currentChapter()];
@@ -439,7 +539,10 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (state.frozen || state.benching) return; // (the benchmark drives rendering itself)
-  if (player && state.started && !params.has("author")) {
+  if (player && state.started && state.intro) {
+    updateOpening(dt);
+    audio.update(dt, camera);
+  } else if (player && state.started && !params.has("author")) {
     // camera raised: slower, steadier, slight zoom
     state.zoom += ((state.raised ? 1 : 0) - state.zoom) * Math.min(1, dt * 8);
     const fov = 70 - state.zoom * 18;

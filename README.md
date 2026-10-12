@@ -42,7 +42,8 @@ The same building is a horror game at night and a detective game by day.
 | M (or Esc) | menu |
 
 - **Real evidence:** every clue is an actual object in the scan (a window frame on the floor, a pink heart traced over in blue, a dog bowl on the terrace), and the photos in your notebook are the frames you took.
-- **Deduction:** the notebook poses each chapter as statements with blanks, which you fill with evidence and keywords. A chapter is only confirmed when every statement holds.
+- **Deduction:** the notebook poses each chapter as a question and statements with blanks, which you fill with evidence and keywords. A chapter is only confirmed when every statement holds; a wrong check marks what holds and nudges on the rest.
+- **Her trail:** footprints in the dust lead from clue to clue in the order of her story, chapter by chapter, and fade once followed.
 
 The title screens' **Graphics** button switches between the quality and performance versions of the scan. Developer switches (`?debug`, `?lite`, `?full`, `?detail=`, `?res=` and more) are listed in [CONTRIBUTING.md](CONTRIBUTING.md#developer-switches).
 

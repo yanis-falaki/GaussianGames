@@ -32,6 +32,18 @@ export const TRAILS = [
 // doorway from the dining hall to the terrace (opened in the collision grid only; see main.js)
 export const TERRACE_DOOR = { x: 13.55, y: -1.55, z: 24.3, hx: 0.45, hz: 0.35, h: 2.4 };
 
+// The opening, shown once (localStorage "undeveloped.intro"): three lines over a slow walk
+// through the dining hall, ending where you start. path: [x, y (floor), z, yaw, pitch] keys.
+export const OPENING = {
+  lines: [
+    { kicker: "Missing · Mara Lenz, 26", text: "Mara photographs the places everyone else has given up on. She signs every one with a small pink heart." },
+    { kicker: "Saturday 3 August · 16:40", text: "She went into Haus Lindenhof alone. At twenty to five her phone went quiet. Five days later her car was still at the gate." },
+    { kicker: "Today", text: "The police walked the ground floor and found nothing. You have the afternoon, and a camera. Find what they missed." },
+  ],
+  path: [[14.2, -1.5, 22.0, 0.25, -0.05], [12.6, -1.5, 16.5, 0.45, -0.12], [11.2, -1.5, 12.0, -0.4, -0.2], [10.6, -1.5, 9.3, -1.35, 0]],
+  seconds: 21,
+};
+
 export const BRIEF = `
 <p><b>Missing:</b> Mara Lenz, 26. Photographer, posts abandoned places as <i>@mara.exposed</i>.</p>
 <p><b>Last known:</b> Saturday 3 August, Haus Lindenhof sanatorium. Her phone last connected inside the building at 16:40. Her car was found at the gate five days later.</p>
@@ -181,11 +193,13 @@ export const CHAPTERS = [
   },
 ];
 
+// The ending, once the last chapter holds: what happened next, then a postcard.
 export const ENDING = `
 <h2>Case closed</h2>
 <p>You call it in from the gate. Two officers walk past the hedge behind the terrace and knock on a caravan door.
-A dog barks, then a man called Henrik opens it, and behind him, wrapped in a blanket, is Mara Lenz.</p>
+A dog barks, a man called Henrik opens it, and behind him, wrapped in a blanket, is Mara Lenz.</p>
 <p>She hadn't called anyone because the man who followed her knew things she had only told her phone.
 Her phone stayed in the building, switched off in a kitchen drawer.</p>
-<p>A man is picked up two days later, still driving the routes on her list. His jacket has blue paint on the cuff.</p>
-<p class="small">Her photographs of Haus Lindenhof were never posted. These are yours.</p>`;
+<p>A man is picked up two days later, still driving the routes on her list. His jacket has blue paint on the cuff.</p>`;
+
+export const POSTCARD = `<p class="hand">To whoever came looking properly.<br/>Thank you. &mdash; M.</p>`;
