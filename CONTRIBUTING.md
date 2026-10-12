@@ -46,7 +46,7 @@ These are URL parameters, never shown in the menus:
 | Script | What it does |
 | --- | --- |
 | `tools/bench/server.sh` | isolated Vite server for headless runs (port 5182, or `PORT=5183`), no HMR |
-| `tools/bench/walk.mjs` | frame pacing of either game on a fixed walk through the building (`--params lite`, `--size`, `--dpr`, `--cpu` throttling, `--cfgs`) |
+| `tools/bench/walk.mjs` | frame pacing of either game on a fixed walk through the building (`--params lite`, `--size`, `--dpr`, `--cpu` throttling, `--cfgs`, `--black` to count all-black frames) |
 | `tools/bench/fitness.mjs` | scores the current render settings: frame time, plus SSIM against reference captures (`--make-ref`) |
 | `tools/bench/search.mjs` | evolutionary search over render settings with the same scoring |
 | `tools/bench/shots.mjs` | screenshots RESIDUE's fixed benchmark views under given configs |

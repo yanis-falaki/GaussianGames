@@ -25,7 +25,7 @@ The same building is a horror game at night and a detective game by day.
 | M (or Esc) | menu |
 
 - **Goal:** find the six plates and hold your lamp on each until it develops. They glow faintly on the floor, best seen in the dark.
-- **The lamp:** it runs down in about 24 seconds. Winding it back up means standing in the dark, making noise, and it takes a few seconds after you stop winding before it will light again.
+- **The lamp:** it runs down in about 24 seconds. Winding it back up means standing in the dark, making noise, and it won't light again until about 3 seconds after you stop winding.
 - **Her:** something in the building moves only in the dark. Light holds her still, and enough of it burns her away.
 
 - **The camcorder:** `H` turns its filter on and off (remembered); `?clean` starts without it.
@@ -43,7 +43,8 @@ The same building is a horror game at night and a detective game by day.
 
 - **Real evidence:** every clue is an actual object in the scan (a window frame on the floor, a pink heart traced over in blue, a dog bowl on the terrace), and the photos in your notebook are the frames you took.
 - **Deduction:** the notebook poses each chapter as a question and statements with blanks, which you fill with evidence and keywords. A chapter is only confirmed when every statement holds; a wrong check marks what holds and nudges on the rest.
-- **The trails:** footprints in the dust (hers, a man's boots, a dog's paws) lead to every clue and up the stairwell, and fade once followed.
+- **Photos:** a bracket closes around what's worth a photo. After the shutter, what you caught lights up and its print slides in; if nothing counts, it says why (too far, or not centred).
+- **The trails:** footprints in the dust (hers, a man's boots, a dog's paws) lead from clue to clue and up the stairwell, and each fades once what it leads to is documented.
 
 The title screens' **Graphics** button switches between the quality and performance versions of the scan. Developer switches (`?debug`, `?lite`, `?full`, `?detail=`, `?res=` and more) are listed in [CONTRIBUTING.md](CONTRIBUTING.md#developer-switches).
 
@@ -82,7 +83,7 @@ Both games stream the scan the way World Labs' own viewer does (Spark's paged le
 - **Streamed level of detail:** a tree of every original splat plus merged parents, in chunks of 64K splats (`public/assets/lite/`). Spark fetches the chunks it needs and draws a budget of splats chosen by on-screen size, so the room you're in keeps full detail and distant rooms cost little.
 - **Foveated detail:** as in World Labs' Marble viewer, full detail in a 100° cone, fading to 0.4 at 140° and 0.2 behind you.
 - **Two budgets** (`src/shared/quality.js`): about 5M splats on dedicated GPUs (**quality**), 1.25M on integrated GPUs and phones (**performance**). The title screens' **Graphics** button switches between them, and `?full` / `?lite` force either.
-- **Adaptive quality** (`src/shared/governor.js`): resolution, then the splat budget, step down when frames are missed and back up when there is headroom (measured with a GPU timer where the browser has one). The level is remembered per browser. The canvas never renders above CSS resolution, so high-DPI screens don't pay 4× the pixels.
+- **Adaptive quality** (`src/shared/governor.js`): resolution, then the splat budget, step down when frames are missed for about a second because of GPU load (not streaming or other stalls) and back up when there is headroom (measured with a GPU timer where the browser has one). The level is remembered per browser. The canvas never renders above CSS resolution, so high-DPI screens don't pay 4× the pixels.
 - **Shading in the vertex shader, on-demand regeneration:** lighting changes and turning your head never regenerate the splat buffer; moving does, every 25 cm, and Spark keeps streaming in between.
 
 On an RTX 2070 at 1080p, walking through the building, both games hold 60 fps with a p99 frame time of 16.8 ms. A GPU six times slower (simulated with `?gpux=6`) still holds 60 fps on the performance scene, at a lower resolution.
@@ -138,7 +139,7 @@ functions/        the Cloudflare Pages Function that streams the scan from R2
 
 **How a frame runs.**
 1. The game updates its state: player movement, then the game's rules. RESIDUE runs `update()` in `residue/main.js` (lamp, plates, entity, HUD). Undeveloped runs its loop in `undeveloped/main.js` (camera, hints, footprints).
-2. Per-frame values go into Spark's patched vertex shader as uniforms: lamp, plates and edge of the world in `residue/lighting.js`, haze and edge in `undeveloped/view.js`. Shading is done there, so turning your head costs nothing.
+2. Per-frame values go into Spark's patched vertex shader as uniforms: lamp, plates and edge of the world in `residue/lighting.js`, haze, edge and the photo highlight in `undeveloped/view.js`. Shading is done there, so turning your head costs nothing.
 3. `renderFrame()` (`residue/view.js`) or `render()` (`undeveloped/view.js`) asks Spark to regenerate its splat buffer only when needed: the camera has moved a few cm, an effect is animating, or new LoD data has arrived. Then it draws, and in RESIDUE the camcorder post pass runs on top.
 
 **Modules by game.**
