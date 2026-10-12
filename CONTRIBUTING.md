@@ -26,7 +26,7 @@ The heavy outputs (`sanatorium.spz`, the `.rad` LoD files, `lite/`, `vox.bin`) a
 
 ## Deploy
 
-`npm run deploy` (`tools/deploy.sh`) builds with `VITE_SCAN_URL=scan/sanatorium.spz`, uploads the scan to the R2 bucket only when it has changed, and publishes `dist/` to the `gaussiangames` Cloudflare Pages project. `functions/scan/[name].js` streams the scan from R2. Run `npx wrangler login` once first.
+`npm run deploy` (`tools/deploy.sh`) builds with `VITE_SCAN_URL=scan/sanatorium.spz`, uploads the single-file scan (for `?spz`) to the R2 bucket only when it has changed, and publishes `dist/` to the `gaussiangames` Cloudflare Pages project. The streamed scene both games draw (`public/assets/lite/`) ships as static files; `functions/scan/[name].js` streams the single-file scan from R2. Run `npx wrangler login` once first.
 
 The site's public address, used by the link-preview tags (Open Graph, Twitter cards) in the three pages, is `VITE_SITE_URL` in `.env`.
 

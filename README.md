@@ -1,10 +1,11 @@
 # Gaussian Games
 
-Two first-person browser games built on **one Gaussian-splat scan** of an abandoned sanatorium. They use the same 12.5 million splats, in the same building, but one game plays at night and the other in daylight.
+**▶ Play in your browser: [games.yanisfalaki.com](https://games.yanisfalaki.com)** · on a desktop or laptop, with a keyboard and mouse
 
-**▶ Play in your browser: [gaussiangames.pages.dev](https://gaussiangames.pages.dev)** (desktop or laptop with a keyboard and mouse)
+![The same dining hall at night in RESIDUE, then by day in Undeveloped](docs/night-to-day.gif)
 
-![The menu: the same dining hall at night (RESIDUE) and by day (Undeveloped)](docs/menu.jpg)
+Two first-person games set entirely inside one real scan of an abandoned sanatorium: 12.5 million Gaussian splats, no meshes, no hand-made collision.
+The same building is a horror game at night and a detective game by day.
 
 | | |
 | --- | --- |
@@ -12,32 +13,7 @@ Two first-person browser games built on **one Gaussian-splat scan** of an abando
 | ![RESIDUE](docs/residue.jpg) | ![Undeveloped](docs/undeveloped.jpg) |
 | It is the last night before demolition. In 1931 a doctor photographed the patients here by lamplight, in exposures so long that only those who held still came out clear. One girl never held still. You go in with a wind-up lamp and a camcorder to find his six plates. | A photographer went into the empty sanatorium and never came out. Walk it in full daylight, photograph the real traces she left behind, and work out where she went. |
 
-## Running it
-
-```bash
-npm install
-npm run assets -- "URBEX Sanatorium Inside - Part01.zip"   # once, see below
-npm run dev
-```
-
-Open the printed URL in Chrome, Edge, Firefox or Safari. Wear headphones for RESIDUE. The menu at `/` links to both games, which are also at `/residue.html` and `/undeveloped.html`.
-
-**The scan is not in this repository.** Download *URBEX: Sanatorium Inside – Part01* by Christoph Schindelar from [superspl.at](https://superspl.at/scene/8429e5e2) (CC BY-NC 4.0). `npm run assets` turns the zip into what the games load:
-- a cropped, cleaned SPZ of every splat (~215 MB);
-- a chunked level-of-detail tree that both games stream;
-- a 10 cm collision voxel grid.
-
-It needs Python 3, Rust/cargo (to build Spark's `build-lod`) and about 10 GB of scratch disk.
-
-### Deploying
-
-The hosted build runs on Cloudflare. The site goes to Pages, and the scan goes to an R2 bucket, because it's too big for a Pages file. A small Pages Function (`functions/scan/[name].js`) streams the scan back on the same domain. After a one-time `npx wrangler login`, deploying is one command:
-
-```bash
-npm run deploy
-```
-
-`tools/deploy.sh` builds the site, uploads the scan only when it has changed, and publishes to the `gaussiangames` Pages project. The `?lod` scene isn't part of the hosted build.
+## Controls
 
 ### RESIDUE
 
@@ -52,11 +28,7 @@ npm run deploy
 - **The lamp:** it runs down in about 30 seconds. Winding it back up means standing in the dark, making noise.
 - **Her:** something in the building moves only in the dark. Light holds her still, and enough of it burns her away.
 
-Extras:
-- `H` turns the camcorder filter on and off (remembered); `?clean` starts without it.
-- `?lite` / `?full` force the smaller or the larger splat budget (normally chosen for your GPU).
-- `?detail=1.2` fixes the splat budget and `?res=0.8` the render scale, instead of adapting them to your frame rate.
-- `?debug` (both games) exposes the game state on `window` and turns on `P` for a freeze frame.
+- **The camcorder:** `H` turns its filter on and off (remembered); `?clean` starts without it.
 
 ### Undeveloped
 
@@ -71,6 +43,8 @@ Extras:
 
 - **Real evidence:** every clue is an actual object in the scan (a window frame on the floor, a pink heart traced over in blue, a dog bowl on the terrace), and the photos in your notebook are the frames you took.
 - **Deduction:** the notebook poses each chapter as statements with blanks, which you fill with evidence and keywords. A chapter is only confirmed when every statement holds.
+
+The title screens' **Graphics** button switches between the quality and performance versions of the scan. Developer switches (`?debug`, `?lite`, `?full`, `?detail=`, `?res=` and more) are listed in [CONTRIBUTING.md](CONTRIBUTING.md#developer-switches).
 
 ## How the splat is used
 
@@ -115,12 +89,40 @@ Benchmarks (all need `tools/bench/server.sh start`):
 - `tools/bench/walk.mjs` measures frame pacing on a fixed walk through the building, for either game (fps, p95/p99, hitches, GPU time, splats and pixels drawn).
 - `tools/bench/fitness.mjs` scores frame time and image quality against reference captures; `tools/bench/search.mjs` runs an evolutionary search over the settings.
 
+## Running it
+
+```bash
+npm install
+npm run assets -- "URBEX Sanatorium Inside - Part01.zip"   # once, see below
+npm run dev
+```
+
+Open the printed URL in Chrome, Edge, Firefox or Safari. Wear headphones for RESIDUE. The menu at `/` links to both games, which are also at `/residue.html` and `/undeveloped.html`.
+
+**The scan is not in this repository.** Download *URBEX: Sanatorium Inside – Part01* by Christoph Schindelar from [superspl.at](https://superspl.at/scene/8429e5e2) (CC BY-NC 4.0). `npm run assets` turns the zip into what the games load:
+- a cropped, cleaned SPZ of every splat (~215 MB);
+- a chunked level-of-detail tree that both games stream;
+- a 10 cm collision voxel grid.
+
+It needs Python 3, Rust/cargo (to build Spark's `build-lod`) and about 10 GB of scratch disk.
+
+### Deploying
+
+The hosted build runs on Cloudflare Pages. The streamed scan both games draw (`public/assets/lite/`, in chunks of a few MB) is served as plain static files. Only the single-file scan behind the `?spz` developer switch is too big for a Pages file: it goes to an R2 bucket, and a small Pages Function (`functions/scan/[name].js`) streams it back on the same domain. After a one-time `npx wrangler login`, deploying is one command:
+
+```bash
+npm run deploy
+```
+
+`tools/deploy.sh` builds the site, uploads the single-file scan only when it has changed, and publishes to the `gaussiangames` Pages project. The `?lod` scene isn't part of the hosted build. The site's public address, used by the link-preview tags, is `VITE_SITE_URL` in `.env`.
+
 ## How the code is organised
 
 ```
 index.html, residue.html, undeveloped.html   the three pages (menu, and one per game)
 src/shared/       what both games use: Spark setup, render settings, quality tiers,
-                  collision + nav (world.js), player controller, fullscreen, the scan's facts
+                  collision + nav (world.js), player controller, fullscreen, device checks,
+                  the scan's facts
 src/residue/      RESIDUE      main.js starts it
 src/undeveloped/  Undeveloped  main.js starts it
 src/menu/         the split-screen menu and its sound
@@ -145,18 +147,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for running, building assets, developer s
 
 ## Credits
 
-- **Scene:** ["URBEX: Sanatorium Inside – Part01"](https://superspl.at/scene/8429e5e2) by Christoph Schindelar, licensed [CC BY-NC 4.0](http://creativecommons.org/licenses/by-nc/4.0/). Because of that licence, this project is **non-commercial**.
+- **Scene:** ["URBEX: Sanatorium Inside – Part01"](https://superspl.at/scene/8429e5e2) by Christoph Schindelar, licensed [CC BY-NC 4.0](http://creativecommons.org/licenses/by-nc/4.0/). Because of that licence, the hosted games, which ship the scan, are **non-commercial**.
 - **Renderer:** [Spark](https://sparkjs.dev) by World Labs, on [three.js](https://threejs.org).
 - **Sound:** RESIDUE's breathing is ["breathing tired"](https://opengameart.org/content/breathing-tired) by mikeask (CC0). All other sound, including Undeveloped's music, is synthesised.
 - **Story:** the stories, people and documents in both games are fiction.
 
 ## License
 
-Gaussian Games is licensed under [CC BY 4.0](LICENSE). You can share, adapt and build on it for any purpose, as long as you credit it wherever you distribute or show it:
+The code and original content in this repository are licensed under [CC BY 4.0](LICENSE): you can share, adapt and build on them for any purpose, commercial included, as long as you credit them wherever you distribute or show them:
 
 > Gaussian Games by Yanis Falaki – https://github.com/yanis-falaki/GaussianGames
 
-That covers the code and original content only:
-- **The scan** is not included and stays under its own licence, [CC BY-NC 4.0](http://creativecommons.org/licenses/by-nc/4.0/) (Christoph Schindelar). Anything that ships it must credit him and stay non-commercial.
-- **The images** in `docs/` and `public/menu/` are renders of the scan, so the same licence applies to them.
+Not covered by that licence:
+- **The scan** is not in this repository. *URBEX: Sanatorium Inside – Part01* by Christoph Schindelar is licensed [CC BY-NC 4.0](http://creativecommons.org/licenses/by-nc/4.0/): anything that ships it, like the hosted games, must credit him and stay non-commercial.
+- **The images** in `docs/` and `public/menu/` are renders of the scan, so they fall under its CC BY-NC 4.0 licence too.
 - **The breathing sample** in `public/assets/audio/` is CC0.

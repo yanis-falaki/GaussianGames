@@ -3,7 +3,7 @@ name = "gaussiangames"
 pages_build_output_dir = "dist"
 compatibility_date = "2025-09-01"
 
-# the scan, too big for a Pages static file, is served by functions/scan/[name].js
+# the single-file scan behind ?spz, too big for a Pages static file, is served by functions/scan/[name].js
 [[r2_buckets]]
 binding = "SCANS"
 bucket_name = "gaussiangames-scans"
