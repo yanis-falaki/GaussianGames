@@ -330,8 +330,26 @@ function capture() {
   const w = canvas.width, h = canvas.height, ar = 16 / 9;
   const sw = Math.min(w, h * ar), sh = sw / ar; // centre crop to 16:9
   ctx.drawImage(canvas, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, thumb.width, thumb.height);
-  const img = thumb.toDataURL("image/jpeg", 0.85);
   const hits = framed(0.6).map((x) => x.clue);
+  // the viewfinder's bracket stays in the photo, around each clue it caught, in the same style
+  // as the live one (corners, gold, a soft shadow), scaled to the print
+  const k = thumb.width / (sw * innerWidth / w); // print pixels per screen (CSS) pixel
+  const arm = Math.max(10, 13 * k), lw = Math.max(2, 2 * k);
+  for (const c of hits) {
+    const b = bracketBox(c, w, h, 44 * w / innerWidth);
+    const f = thumb.width / sw, x = (b.L - (w - sw) / 2) * f, y = (b.T - (h - sh) / 2) * f, bw = b.w * f, bh = b.h * f;
+    ctx.save();
+    ctx.strokeStyle = "#ffd36b"; ctx.lineWidth = lw; ctx.lineCap = "square";
+    ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 2;
+    ctx.beginPath();
+    for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + bw, y, -1, 1], [x, y + bh, 1, -1], [x + bw, y + bh, -1, -1]]) {
+      const px = cx + dx * lw / 2, py = cy + dy * lw / 2;
+      ctx.moveTo(px, py + dy * arm); ctx.lineTo(px, py); ctx.lineTo(px + dx * arm, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  const img = thumb.toDataURL("image/jpeg", 0.85);
   const fresh = hits.filter((c) => !state.evidence.get(c.id)?.img);
   // what was captured lights up: its own splats glow and a band of light sweeps up them
   hits.slice(0, 3).forEach((c, i) => flashes.push({ clue: c, t: 0, slot: 1 + i, strength: fresh.includes(c) ? 1 : 0.45 }));
@@ -467,6 +485,21 @@ function lostCue() {
 }
 
 // ---------------------------------------------------------------------------- frame
+// the bracket around a clue: its glow region projected to a W x H view (left, top, width,
+// height in that view's pixels, at least `min` on a side, kept inside the frame)
+function bracketBox(clue, W, H, min) {
+  let x0 = 1, y0 = 1, x1 = -1, y1 = -1;
+  for (let i = 0; i < 8; i++) {
+    corner.set(i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1).multiply(clue.ext).multiplyScalar(0.75).add(clue.hv).project(camera);
+    x0 = Math.min(x0, corner.x); x1 = Math.max(x1, corner.x); y0 = Math.min(y0, corner.y); y1 = Math.max(y1, corner.y);
+  }
+  const cl = (v) => Math.max(-0.92, Math.min(0.92, v));
+  const L = (cl(x0) + 1) / 2 * W, R = (cl(x1) + 1) / 2 * W;
+  const T = (1 - cl(y1)) / 2 * H, B = (1 - cl(y0)) / 2 * H;
+  const w = Math.max(min, R - L), h = Math.max(min, B - T);
+  return { L: (L + R) / 2 - w / 2, T: (T + B) / 2 - h / 2, w, h };
+}
+
 // camera raised: what's in frame, close enough to count. The subject's contour glows faintly
 // (updateHighlights) and a bracket closes around it on screen
 const corner = new THREE.Vector3();
@@ -482,16 +515,8 @@ function updateViewfinder() {
   const br = $("vf-target");
   if (!subject) { br.classList.remove("on"); return; }
   // the bracket: the subject's region projected to the screen
-  let x0 = 1, y0 = 1, x1 = -1, y1 = -1;
-  for (let i = 0; i < 8; i++) {
-    corner.set(i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1).multiply(subject.ext).multiplyScalar(0.75).add(subject.hv).project(camera);
-    x0 = Math.min(x0, corner.x); x1 = Math.max(x1, corner.x); y0 = Math.min(y0, corner.y); y1 = Math.max(y1, corner.y);
-  }
-  const cl = (v) => Math.max(-0.92, Math.min(0.92, v));
-  const L = (cl(x0) + 1) / 2 * innerWidth, R = (cl(x1) + 1) / 2 * innerWidth;
-  const T = (1 - cl(y1)) / 2 * innerHeight, B = (1 - cl(y0)) / 2 * innerHeight;
-  const w = Math.max(44, R - L), h = Math.max(44, B - T);
-  br.style.transform = `translate(${(L + R) / 2 - w / 2}px, ${(T + B) / 2 - h / 2}px)`;
+  const { L, T, w, h } = bracketBox(subject, innerWidth, innerHeight, 44);
+  br.style.transform = `translate(${L}px, ${T}px)`;
   br.style.width = `${w}px`; br.style.height = `${h}px`;
   br.classList.add("on");
   br.classList.toggle("known", !fresh.length);
