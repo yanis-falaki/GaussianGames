@@ -1,11 +1,11 @@
 """Write a copy of a 3DGS PLY with spherical harmonics cut to degree 1, streaming in slices so it
 needs little memory. The input for the light (paged LoD) scene: build-lod then has far less to
 hold in memory, and degree-1 colour is all the light scene keeps anyway.
-    python tools/slim_ply.py raw/clean.ply raw/lite/sanatorium-lite.ply
+    python tools/assets/slim_ply.py raw/clean.ply raw/lite/sanatorium-lite.ply
 """
 import sys
 import numpy as np
-sys.path.insert(0, 'tools')
+sys.path.insert(0, 'tools/assets')
 from plyio import load_ply
 
 src, dst = sys.argv[1], sys.argv[2]

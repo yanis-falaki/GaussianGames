@@ -28,6 +28,6 @@ export const RENDER = {
   scene: import.meta.env?.VITE_SCAN_URL || "assets/sanatorium.spz",
   lodScene: "assets/sanatorium-lod.rad", // ?lod : budgeted level-of-detail fallback for weaker GPUs
   // the lite scene for integrated GPUs (quality.js): a chunked level-of-detail tree with degree-1
-  // colour, streamed chunk by chunk (tools/build_assets.sh)
+  // colour, streamed chunk by chunk (tools/assets/build.sh)
   liteScene: "assets/lite/sanatorium-lite-lod.rad",
 };

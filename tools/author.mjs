@@ -1,4 +1,5 @@
-// Authoring helper for Undeveloped (needs the bench server, port 5182).
+// Authoring helper for Undeveloped: screenshot poses with a pixel grid, and turn picked pixels
+// into 3D clue positions (needs tools/bench/server.sh start).
 //   node tools/author.mjs shots poses.json outDir   -> screenshot each pose with a pixel grid
 //   node tools/author.mjs pick picks.json           -> [{pose, px:[x,y]}] -> 3D points (voxel raycast)
 import fs from "node:fs";

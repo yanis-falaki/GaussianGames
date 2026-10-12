@@ -1,3 +1,4 @@
+"""Memory-map a binary little-endian 3DGS PLY as a numpy record array (used by the other asset scripts)."""
 import numpy as np
 def load_ply(path):
     with open(path,'rb') as f:

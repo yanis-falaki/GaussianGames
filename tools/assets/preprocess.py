@@ -1,6 +1,6 @@
 """Crop + clean the raw scan. Keeps the original (y-down) frame; the game flips it at runtime."""
 import sys, numpy as np
-sys.path.insert(0, 'tools')
+sys.path.insert(0, 'tools/assets')
 from plyio import load_ply
 
 src, dst = sys.argv[1], sys.argv[2]

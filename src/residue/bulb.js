@@ -5,6 +5,9 @@
 // depth-writing point drawn before the splats, so walls in front hide it (Spark tests depth
 // but doesn't write it).
 
+import * as THREE from "three";
+import { SplatMesh } from "@sparkjsdev/spark";
+
 function buildFixture(pos, ceilY) {
   let seed = 7;
   const R = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -33,8 +36,6 @@ function buildFixture(pos, ceilY) {
   }
   return new SplatMesh({ constructSplats: (splats) => { for (const [c, sc, op, col] of out) splats.pushSplat(c, sc, q, op, col); } });
 }
-import * as THREE from "three";
-import { SplatMesh } from "@sparkjsdev/spark";
 
 // What the bulb can see: a small 3D texture around it (1 = in line of sight), so its light
 // stops at walls instead of shining through into the next room.

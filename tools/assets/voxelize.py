@@ -5,7 +5,7 @@ Output (world frame, y-up: X=x, Y=-y, Z=-z):
   public/assets/vox.json - grid metadata
 """
 import sys, json, numpy as np
-sys.path.insert(0, 'tools')
+sys.path.insert(0, 'tools/assets')
 from plyio import load_ply
 
 src, outdir = sys.argv[1], sys.argv[2]

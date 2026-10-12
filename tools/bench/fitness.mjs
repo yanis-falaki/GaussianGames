@@ -1,9 +1,10 @@
-// Score the render pipeline + settings in the current working tree.
-//   node tools/fitness.mjs                 -> evaluates src/shared/render-config.js, prints JSON (+ fitness)
-//   node tools/fitness.mjs --cfg '{"lodSplatScale":2}'   -> override settings
-//   node tools/fitness.mjs --quick         -> faster, noisier (4 views, short settles): for iterating
-//   node tools/fitness.mjs --make-ref      -> capture the reference images (run once, on baseline code)
-// Needs a bench server: npx vite --config vite.bench.config.js  (port 5182, or BENCH_URL=...)
+// Score RESIDUE's render pipeline + settings in the current working tree (image quality vs the
+// reference captures, and frame time).
+//   node tools/bench/fitness.mjs                 -> evaluates src/shared/render-config.js, prints JSON (+ fitness)
+//   node tools/bench/fitness.mjs --cfg '{"lodSplatScale":2}'   -> override settings
+//   node tools/bench/fitness.mjs --quick         -> faster, noisier (4 views, short settles): for iterating
+//   node tools/bench/fitness.mjs --make-ref      -> capture the reference images (run once, on baseline code)
+// Needs the bench server: tools/bench/server.sh start  (port 5182, or BENCH_URL=...)
 // Benchmarks hold a machine-wide GPU lock so runs never overlap (timing + GPU memory safety).
 import fs from "node:fs";
 import path from "node:path";

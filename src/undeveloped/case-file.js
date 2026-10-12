@@ -5,7 +5,7 @@ export const SPAWN = { x: 10.6, y: -1.5, z: 9.3, yaw: -1.35 };
 // Mara's footprints: the last stretch of the walk from the spawn to the upstairs landing
 export const TRAIL = { to: [-1.0, 2.25, 18.0], length: 15 };
 
-// doorway from the dining hall to the terrace (collision carve only; see main.js)
+// doorway from the dining hall to the terrace (opened in the collision grid only; see main.js)
 export const TERRACE_DOOR = { x: 13.55, y: -1.55, z: 24.3, hx: 0.45, hz: 0.35, h: 2.4 };
 
 export const BRIEF = `

@@ -1,6 +1,6 @@
 // Evolutionary search over render settings against the benchmark evaluator.
-//   node tools/search.mjs [generations=8] [lambda=3]
-// Maximises image quality (SSIM vs a high-budget reference, steady + right-after-turning)
+//   node tools/bench/search.mjs [generations=8] [lambda=3]   (needs tools/bench/server.sh start)
+// Maximises image quality (SSIM vs the reference captures from fitness.mjs --make-ref, steady + right-after-turning)
 // subject to a GPU frame-time budget. Every evaluation is appended to bench/search-log.jsonl,
 // the best config so far is written to bench/best.cfg.json.
 import fs from "node:fs";
@@ -76,15 +76,13 @@ const page = await browser.newPage();
 page.on("pageerror", (e) => console.error("PAGE ERROR:", e.message));
 await page.goto("http://localhost:5182/residue.html?bench", { waitUntil: "domcontentloaded" });
 await page.waitForFunction(() => !!window.bench, { timeout: 0, polling: 1000 });
-await page.evaluate(async () => { window.__ref = await window.bench.capture({ name: "ref", lodSplatScale: 2, maxSh: 3, pixelScale: 1 }, 5000); });
-console.error("reference captured");
 
 const seen = new Map();
 async function evaluate(cfg) {
   const k = key(cfg);
   if (seen.has(k)) return seen.get(k);
   const c = { ...cfg, name: name(cfg), settleMs: 5000 };
-  const r = await page.evaluate((c) => window.bench.evaluate(c, window.__ref, 6), c);
+  const r = await page.evaluate((c) => window.bench.evaluate(c, 6), c);
   const row = { ...c, ...r, fitness: fitness(r) };
   seen.set(k, row);
   fs.appendFileSync(LOG, JSON.stringify(row) + "\n");

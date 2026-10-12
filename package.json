@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "assets": "tools/build_assets.sh",
+    "assets": "tools/assets/build.sh",
     "deploy": "tools/deploy.sh"
   },
   "dependencies": {

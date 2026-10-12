@@ -1,5 +1,6 @@
-// Screenshot fixed viewpoints under given render configs, in the game's own lighting.
-//   node tools/shots.mjs configs.json outDir [viewIndices e.g. 1,2,6] [unlit]
+// Screenshot RESIDUE's fixed benchmark viewpoints under given render configs, in the game's own
+// lighting (needs tools/bench/server.sh start).
+//   node tools/bench/shots.mjs configs.json outDir [viewIndices e.g. 1,2,6] [unlit]
 import fs from "node:fs";
 import { execSync } from "node:child_process";
 import puppeteer from "puppeteer";
