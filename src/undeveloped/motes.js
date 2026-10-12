@@ -1,6 +1,5 @@
 // Dust motes glinting in the sunlight above places worth a closer look: an in-world cue that
-// something was disturbed here recently. Fades out once the clue is photographed / read. Also
-// used, sparser, over the footprints of the trails being followed (set() turns them on and off).
+// something was disturbed here recently. Fades out once the clue is photographed / read.
 // Drawn as opaque points that write depth: splats in front hide them, splats behind are
 // rejected by the depth test (Spark tests depth but doesn't write it).
 import * as THREE from "three";

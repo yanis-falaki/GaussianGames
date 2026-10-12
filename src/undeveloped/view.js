@@ -13,7 +13,8 @@ import { HAZE_COLOR } from "./haze.js";
 // Also: distance haze, distant splats fade toward the haze colour (see haze.js) so the edges
 // of the capture dissolve into light rather than ending abruptly. And the photo highlight: up to
 // four clue regions (ellipsoids) whose own splats glow, strongest on the splats seen edge-on,
-// which trace the object's contour: faintly while it's framed, brightly when it's photographed.
+// which trace the object's contour, when it's photographed. (A slot can also glow faintly while
+// framed, phase < 0; the game currently leaves that to the viewfinder bracket.)
 // All in the vertex shader, so it animates without regenerating the splat buffer.
 function installExtent(spark, alphaCut, haze) {
   spark.material.uniforms.cfAlphaCut = { value: alphaCut };

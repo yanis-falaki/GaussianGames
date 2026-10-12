@@ -38,7 +38,7 @@ const audio = new UndevelopedAudio();
 const music = new UndevelopedMusic(audio);
 music.bindButton($("music"));
 const haze = new Haze(view.scene, camera);
-let world, player, motes, trails, trailMotes;
+let world, player, motes, trails;
 
 $("brief").innerHTML = CASE.BRIEF;
 $("credits").innerHTML = SCENE_CREDIT + "The case, its people and events are fiction.";
@@ -77,12 +77,9 @@ async function load() {
   await view.mesh.initialized;
   watchForSlowFrames(view.quality); // if the full scan is a slideshow here, switch to the lite one
   motes = new Motes(view.scene, clues);
-  // the footprint trails, leg by leg, with a little glinting dust over some of the prints of
-  // the legs being followed
+  // the footprint trails, leg by leg
   const at = (p) => (typeof p === "string" ? byId[p].v : new THREE.Vector3(...p));
   trails = new Trails({ world, scene: view.scene, defs: CASE.TRAILS, point: at, onRegen: view.touch });
-  trailMotes = new Motes(view.scene, trails.legs.flatMap((leg) =>
-    leg.prints.filter((_, i) => i % 10 === 4).map((v, i) => ({ id: `${leg.def.id}:${i}`, leg: leg.def.id, v, r: 0.05 }))), { per: 26, strength: 0 });
   updateTrails(true);
   updateHud();
   // let Spark settle before we allow entry
@@ -365,17 +362,10 @@ function showPrint(img, title, line, kicker, mode = "") {
   printTimer = setTimeout(() => el.classList.remove("on"), mode === "none" ? 3200 : 5200);
 }
 
-// the photo highlight (view.js): slot 0 follows what the camera is aimed at, slots 1-3 flash
-// after the shutter
+// the photo highlight (view.js): slots 1-3 flash after the shutter (while aiming, the bracket
+// alone shows what's in frame)
 const flashes = [];
-const aim = { clue: null, k: 0 };
 function updateHighlights(dt) {
-  // aiming: ease toward the subject in frame; a new subject takes over once the old one faded
-  const want = state.raised ? state.aimed : null;
-  if (want !== aim.clue) { aim.k -= dt * 5; if (aim.k <= 0) { aim.k = 0; aim.clue = want; } }
-  else if (aim.clue) aim.k = Math.min(1, aim.k + dt * 2.5);
-  const documentedAim = aim.clue && state.evidence.get(aim.clue.id)?.img;
-  view.setHighlight(0, aim.clue?.hv, aim.clue?.ext, aim.k * (documentedAim ? 0.35 : 1), -1, aim.clue?.key);
   let focus = 0;
   for (let i = flashes.length - 1; i >= 0; i--) {
     const f = flashes[i];
@@ -447,7 +437,6 @@ function updateTrails(initial = false) {
     const d = leg.def;
     const want = d.always ? "always" : (d.done ?? [d.to]).some(documented) ? "faded" : "active";
     trails.set(d.id, want);
-    trailMotes.set((m) => m.leg === d.id, want === "faded" ? 0 : 1);
   }
 }
 
@@ -560,7 +549,6 @@ renderer.setAnimationLoop(() => {
   }
   if (player) trails?.update(dt, player.pos);
   motes?.update(dt, clock.elapsedTime, renderer.domElement.height);
-  trailMotes?.update(dt, clock.elapsedTime, renderer.domElement.height);
   haze.update(clock.elapsedTime);
   view.spark.material.uniforms.cfTime.value = clock.elapsedTime;
   if (player) view.spark.material.uniforms.cfPlayer.value.copy(player.pos);
