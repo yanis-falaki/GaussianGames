@@ -1,15 +1,13 @@
-// Narrative content. Positions are world-space (y-up) hints; they're snapped to the
+// RESIDUE's story: the spawn, the six plates and their notes, the way out, the intro and ending.
+// Positions are world-space (y-up) hints; they're snapped to the
 // nearest walkable splat floor at runtime.
+import { SCENE_CREDIT } from "../shared/scan.js";
 
 export const SPAWN = { x: -2.6, y: -1.5, z: -2.4, yaw: Math.PI * 0.9 };
 
 // the end: a lounge window onto the terrace comes apart and becomes a doorway
 export const EXIT = { x: 15.2, y: -1.7, z: 25.0 };
 export const BREACH = { x: 13.55, y: -1.55, z: 24.75, hx: 0.5, hz: 0.75, h: 2.6 };
-
-// Floors higher than the ground floor only exist in the stairwell / upper rooms. Everywhere
-// else, a "floor" up there is the top of a ceiling (the scan has no roof).
-export const UPPER = { x0: -3.5, x1: 3.0, z0: 10.5, z1: 27.0, minY: 0.9 };
 
 export const PIANO = { x: 12.3, y: -0.6, z: 5.2 };
 
@@ -74,10 +72,5 @@ export const ENDING = [
   "Two figures in the doorway, holding hands. Neither of them held still.",
 ];
 
-// the scan's attribution (CC BY-NC 4.0), shared by both games
-export const SCENE_CREDIT =
-  'Scene: “URBEX: Sanatorium Inside – Part01” by Christoph Schindelar ' +
-  '(<a href="https://superspl.at/scene/8429e5e2" target="_blank">superspl.at</a>), ' +
-  'licensed <a href="http://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a>. Rendered with Spark (World Labs). ';
 export const CREDITS = SCENE_CREDIT +
   "Breathing: \u201cbreathing tired\u201d by mikeask (CC0, opengameart.org). The story, its people and the 1931 events are fiction.";

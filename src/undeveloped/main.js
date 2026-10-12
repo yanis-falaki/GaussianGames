@@ -4,14 +4,14 @@ import { CaseAudio } from "./audio.js";
 import { CaseMusic } from "./music.js";
 import { Motes } from "./motes.js";
 import { trailRoute, buildTrail } from "./trail.js";
-import { bindFullscreenButtons, sinceLockChange } from "../fullscreen.js";
-import { watchForSlowFrames, bindQualityButtons } from "../quality.js";
+import { bindFullscreenButtons, sinceLockChange } from "../shared/fullscreen.js";
+import { watchForSlowFrames, bindQualityButtons } from "../shared/quality.js";
 import { Haze } from "./haze.js";
-import { buildEdgeField } from "./boundary.js";
-import { World } from "../world.js";
-import { Player } from "../player.js";
-import * as STORY from "../story.js";
-import * as CASE from "./case-data.js";
+import { buildEdgeField } from "../shared/edge-field.js";
+import { World } from "../shared/world.js";
+import { Player } from "../shared/player.js";
+import { SCENE_CREDIT, UPPER_FLOORS, BOUNDARIES } from "../shared/scan.js";
+import * as CASE from "./case-file.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -31,7 +31,7 @@ const haze = new Haze(view.scene, camera);
 let world, player, motes, trail, trailMotes;
 
 $("brief").innerHTML = CASE.BRIEF;
-$("credits").innerHTML = STORY.SCENE_CREDIT + "The case, its people and events are fiction.";
+$("credits").innerHTML = SCENE_CREDIT + "The case, its people and events are fiction.";
 
 // ---------------------------------------------------------------------------- state
 const clues = CASE.CLUES.map((c) => ({ ...c, kind: c.kind ?? "photo", v: new THREE.Vector3(...c.pos) }));
@@ -47,11 +47,11 @@ const state = {
 };
 
 async function load() {
-  world = await World.load("assets", STORY.UPPER);
+  world = await World.load("assets", UPPER_FLOORS);
   // the terrace door: its sill isn't bridged by the voxel floors, so open the doorway (collision only)
   world.carve(CASE.TERRACE_DOOR);
-  for (const b of CASE.BOUNDARIES) world.block(b);
-  view.setBoundaries(CASE.BOUNDARIES);
+  for (const b of BOUNDARIES) world.block(b);
+  view.setBoundaries(BOUNDARIES);
   world.buildNav();
   world.setMainFrom(CASE.SPAWN);
   view.setEdgeField(buildEdgeField(world));

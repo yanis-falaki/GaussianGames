@@ -54,7 +54,7 @@ export const VSU = {
   // alpha. Opaque splats keep the full maxStdDev (no visible edge on smooth walls); faint ones
   // shrink, saving fill. 0 disables.
   rsAlphaCut: { value: 0.01 },
-  // edge of the world (shared with Undeveloped: src/case/boundary.js + BOUNDARIES)
+  // edge of the world (shared with Undeveloped: src/shared/edge-field.js + BOUNDARIES)
   rsEdgeTex: { value: new THREE.Data3DTexture(new Uint8Array([0]), 1, 1, 1) },
   rsEdgeOrigin: { value: new THREE.Vector3() },
   rsEdgeSize: { value: new THREE.Vector3(1, 1, 1) },

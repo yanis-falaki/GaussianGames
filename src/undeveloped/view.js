@@ -2,9 +2,9 @@
 // regenerated only when the camera moves (see RESIDUE's notes in README "Performance").
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
-import { RENDER } from "../render-config.js";
+import { RENDER } from "../shared/render-config.js";
 import { HAZE_COLOR } from "./haze.js";
-import { chooseQuality, QUALITY } from "../quality.js";
+import { chooseQuality, QUALITY } from "../shared/quality.js";
 
 // Patch Spark's vertex shader: opacity-aware splat extent (quad ends where the splat's falloff
 // drops below ALPHA_CUT): opaque splats keep the full footprint, faint ones shrink -> less fill.

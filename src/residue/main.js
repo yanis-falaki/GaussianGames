@@ -1,19 +1,19 @@
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
-import { World } from "./world.js";
+import { World } from "../shared/world.js";
 import { Audio } from "./audio.js";
-import { Player } from "./player.js";
+import { Player } from "../shared/player.js";
 import { SceneFX, U, installShading } from "./lighting.js";
 import { Entity } from "./entity.js";
 import * as STORY from "./story.js";
 import * as BENCH from "./bench.js";
-import { RENDER, COLOUR_MODES } from "./render-config.js";
-import { BOUNDARIES } from "./case/case-data.js";
-import { buildEdgeField } from "./case/boundary.js";
+import { RENDER, COLOUR_MODES } from "../shared/render-config.js";
+import { BOUNDARIES, UPPER_FLOORS } from "../shared/scan.js";
+import { buildEdgeField } from "../shared/edge-field.js";
 import { Camcorder } from "./camcorder.js";
 import { Bulb, buildLightVis } from "./bulb.js";
-import { toggleFullscreen, sinceLockChange } from "./fullscreen.js";
-import { chooseQuality, watchForSlowFrames, bindQualityButtons, QUALITY, gpuName } from "./quality.js";
+import { toggleFullscreen, sinceLockChange } from "../shared/fullscreen.js";
+import { chooseQuality, watchForSlowFrames, bindQualityButtons, QUALITY, gpuName } from "../shared/quality.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -87,7 +87,7 @@ const audio = new Audio();
 let world, player, fx, entity, sanatorium;
 
 async function load() {
-  world = await World.load("assets", STORY.UPPER);
+  world = await World.load("assets", UPPER_FLOORS);
   // where the scan falls apart, block it off (same zones as Undeveloped)
   for (const b of BOUNDARIES) world.block(b);
   world.buildNav();

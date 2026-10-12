@@ -94,7 +94,7 @@
   .links a:hover, .links a:focus-visible { opacity: 1; }
   .links a:focus-visible { outline: 1px solid #fff; outline-offset: 2px; }
   .links svg { width: 13px; height: 13px; flex: none; fill: currentColor; }
-  /* the sound switch (added by src/menu-audio.js), set like the header */
+  /* the sound switch (added by src/menu/main.js), set like the header */
   .sound-toggle { position: absolute; z-index: 5; top: 19px; right: 22px; display: none; align-items: center; gap: 8px; padding: 6px 4px;
     background: none; border: 0; color: #fff; mix-blend-mode: difference; opacity: .6; cursor: pointer;
     font: 500 10px/1 "IBM Plex Mono", monospace; letter-spacing: .24em; text-transform: uppercase; transition: opacity .3s; }
@@ -176,19 +176,6 @@
     <span class="note">best on a desktop with a keyboard and mouse</span>
   </footer>
 </main>
-<script>
-  // the side you point at (or tab to) widens; leaving the window evens them out again
-  const split = document.getElementById("split");
-  const pick = (name) => {
-    split.classList.remove("pick-residue", "pick-undeveloped");
-    if (name) split.classList.add(`pick-${name}`);
-  };
-  for (const side of document.querySelectorAll(".side")) {
-    side.addEventListener("pointerenter", () => pick(side.dataset.pick));
-    side.addEventListener("focus", () => pick(side.dataset.pick));
-  }
-  document.addEventListener("pointerleave", () => pick(null));
-</script>
-<script type="module" src="/src/menu-audio.js"></script>
+<script type="module" src="/src/menu/main.js"></script>
 </body>
 </html>

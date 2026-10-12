@@ -1,5 +1,5 @@
 // Score the render pipeline + settings in the current working tree.
-//   node tools/fitness.mjs                 -> evaluates src/render-config.js, prints JSON (+ fitness)
+//   node tools/fitness.mjs                 -> evaluates src/shared/render-config.js, prints JSON (+ fitness)
 //   node tools/fitness.mjs --cfg '{"lodSplatScale":2}'   -> override settings
 //   node tools/fitness.mjs --quick         -> faster, noisier (4 views, short settles): for iterating
 //   node tools/fitness.mjs --make-ref      -> capture the reference images (run once, on baseline code)
@@ -29,7 +29,7 @@ const BUDGET_P95 = Number(process.env.BENCH_BUDGET_MS ?? 12.5);
 const REF_DIR = process.env.BENCH_REF_DIR ?? path.resolve("public/assets/bench");
 const REF_CFG = { name: "reference", lodSplatScale: 2, maxSh: 3, pixelScale: 1, settleMs: 6000 };
 
-const { RENDER } = await import(pathToFileURL(path.resolve("src/render-config.js")).href);
+const { RENDER } = await import(pathToFileURL(path.resolve("src/shared/render-config.js")).href);
 const cfg = { name: "candidate", ...RENDER, ...cfgArg };
 
 const browser = await puppeteer.launch({

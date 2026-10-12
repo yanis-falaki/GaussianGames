@@ -5,18 +5,6 @@ export const SPAWN = { x: 10.6, y: -1.5, z: 9.3, yaw: -1.35 };
 // Mara's footprints: the last stretch of the walk from the spawn to the upstairs landing
 export const TRAIL = { to: [-1.0, 2.25, 18.0], length: 15 };
 
-// Boundary zones: places where the scan falls apart and leads nowhere. The splats inside
-// dissolve into the haze and the player is stopped at the face (see view.js / world.block).
-export const BOUNDARIES = [
-  { name: "upstairs north corridor", min: [-0.6, 1.9, 9.0], max: [1.9, 5.2, 15.0] },
-  { name: "upper stair flight to 2nd floor", min: [-1.6, 2.4, 14.5], max: [-0.35, 5.2, 15.95] },
-  { name: "dining back room (north part)", min: [4.0, -1.8, 11.9], max: [6.2, 1.4, 15.9] },
-  { name: "dining back room (south part)", min: [4.0, -1.8, 15.9], max: [6.6, 1.4, 23.0] },
-  { name: "lounge south-west, missing end wall", min: [0.6, -1.9, 32.0], max: [4.8, 1.3, 34.5] },
-  { name: "entrance vestibule south pocket", min: [12.9, -1.9, 31.1], max: [14.6, 1.3, 33.5] },
-  { name: "kitchen NE door recess (optional, low priority)", min: [2.05, -1.8, -4.75], max: [3.6, 1.4, -4.0] },
-];
-
 // doorway from the dining hall to the terrace (collision carve only; see main.js)
 export const TERRACE_DOOR = { x: 13.55, y: -1.55, z: 24.3, hx: 0.45, hz: 0.35, h: 2.4 };
 
