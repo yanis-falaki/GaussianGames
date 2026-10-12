@@ -1,10 +1,12 @@
-// The splat view for Undeveloped: the capture with its original daylight, every splat drawn,
-// regenerated only when the camera moves (see RESIDUE's notes in README "Performance").
+// Undeveloped's render pipeline: the capture in its original daylight, with Spark's shader
+// patched for the haze at the edge of the world, and render(), which regenerates the splat
+// buffer only when the camera moves (as in residue/view.js).
 import * as THREE from "three";
-import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+import { SparkRenderer } from "@sparkjsdev/spark";
 import { RENDER } from "../shared/render-config.js";
-import { HAZE_COLOR } from "./haze.js";
 import { chooseQuality, QUALITY } from "../shared/quality.js";
+import { createRenderer, createScanMesh } from "../shared/splat-scene.js";
+import { HAZE_COLOR } from "./haze.js";
 
 // Patch Spark's vertex shader: opacity-aware splat extent (quad ends where the splat's falloff
 // drops below ALPHA_CUT): opaque splats keep the full footprint, faint ones shrink -> less fill.
@@ -86,11 +88,7 @@ void main() {
 }
 
 export function createView({ container, params, onProgress }) {
-  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1) * RENDER.pixelScale);
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setClearColor(0x000000, 1);
-  container.appendChild(renderer.domElement);
+  const renderer = createRenderer(container);
   // full scan for dedicated GPUs, a streamed lighter one for integrated GPUs (see quality.js)
   const quality = chooseQuality(renderer, params);
   const Q = QUALITY[quality];
@@ -112,12 +110,7 @@ export function createView({ container, params, onProgress }) {
   spark.lodQuatOverride = new THREE.Quaternion();
   scene.add(spark);
 
-  const mesh = new SplatMesh({
-    url: params.get("scene") ?? (Q.paged ? RENDER.liteScene : params.has("lod") ? RENDER.lodScene : RENDER.scene),
-    paged: Q.paged || undefined, // the lite scene streams its level-of-detail chunks as needed
-    onProgress,
-  });
-  mesh.quaternion.set(1, 0, 0, 0); // the capture is y-down
+  const mesh = createScanMesh({ params, tier: Q, onProgress });
   scene.add(mesh);
 
   addEventListener("resize", () => {
