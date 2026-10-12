@@ -138,7 +138,8 @@ function initSound(split) {
           wait = Math.max(wait, audio.exit(name));
         }
       } catch (err) { console.warn(err); }
-      veil.className = `menu-veil ${name}`;
+      // (to-…: plain .residue / .undeveloped would also pick up that side's clip and overlays)
+      veil.className = `menu-veil to-${name}`;
       void veil.offsetWidth;
       veil.classList.add("on");
       setTimeout(() => { location.href = href; }, wait * 1000);
